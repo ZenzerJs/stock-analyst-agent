@@ -26,6 +26,14 @@ from app.tools import (
 
 logger = logging.getLogger(__name__)
 
+
+class LLMRateLimitError(Exception):
+    """Raised when all configured LLM providers are rate-limited."""
+
+
+RATE_LIMIT_MESSAGE = "Rate limited — wait a moment or add your Groq key in Settings."
+
+
 _active_provider: ContextVar[str | None] = ContextVar("active_provider", default=None)
 _active_model: ContextVar[str | None] = ContextVar("active_model", default=None)
 _active_routing: ContextVar[str | None] = ContextVar("active_routing", default=None)
@@ -84,8 +92,21 @@ tools = [
 tool_node = ToolNode(tools)
 
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+GEMINI_FALLBACK_MODELS = os.getenv(
+    "GEMINI_FALLBACK_MODELS",
+    "gemini-2.5-flash,gemini-2.0-flash",
+)
 GEMINI_MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1200"))
+
+
+def gemini_model_chain() -> list[str]:
+    models: list[str] = []
+    for name in (GEMINI_MODEL, *GEMINI_FALLBACK_MODELS.split(",")):
+        candidate = name.strip()
+        if candidate and candidate not in models:
+            models.append(candidate)
+    return models
 
 
 def get_groq_llm(groq_api_key: str):
@@ -97,9 +118,9 @@ def get_groq_llm(groq_api_key: str):
     return llm.bind_tools(tools)
 
 
-def get_gemini_llm(gemini_api_key: str):
+def get_gemini_llm(gemini_api_key: str, model: str | None = None):
     llm = ChatGoogleGenerativeAI(
-        model=GEMINI_MODEL,
+        model=model or GEMINI_MODEL,
         temperature=0.2,
         top_p=0.9,
         max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
@@ -108,22 +129,50 @@ def get_gemini_llm(gemini_api_key: str):
     return llm.bind_tools(tools)
 
 
+def invoke_gemini(gemini_api_key: str, messages) -> tuple[BaseMessage, str]:
+    """Try primary Gemini model, then fallbacks when a model is rate-limited."""
+    last_rate_error: Exception | None = None
+    for model in gemini_model_chain():
+        try:
+            response = get_gemini_llm(gemini_api_key, model=model).invoke(messages)
+            return response, model
+        except Exception as exc:
+            if is_rate_limit_error(exc):
+                logger.warning("Gemini model %s rate-limited — trying next model", model)
+                last_rate_error = exc
+                continue
+            raise
+    if last_rate_error:
+        raise last_rate_error
+    raise RuntimeError("No Gemini models configured")
+
+
 def is_rate_limit_error(exc: Exception) -> bool:
-    text = str(exc).lower()
-    if any(
-        term in text
-        for term in ("429", "rate limit", "rate_limit", "too many requests", "quota")
-    ):
-        return True
+    current: BaseException | None = exc
+    while current is not None:
+        text = str(current).lower()
+        if any(
+            term in text
+            for term in (
+                "429",
+                "rate limit",
+                "rate_limit",
+                "too many requests",
+                "quota",
+                "resource_exhausted",
+            )
+        ):
+            return True
 
-    status = getattr(exc, "status_code", None)
-    if status == 429:
-        return True
+        status = getattr(current, "status_code", None)
+        if status == 429:
+            return True
 
-    response = getattr(exc, "response", None)
-    if response is not None and getattr(response, "status_code", None) == 429:
-        return True
+        response = getattr(current, "response", None)
+        if response is not None and getattr(response, "status_code", None) == 429:
+            return True
 
+        current = current.__cause__
     return False
 
 
@@ -187,17 +236,24 @@ def call_model(state: AgentState, config: RunnableConfig):
             if is_rate_limit_error(exc) and gemini_api_key:
                 logger.warning("Groq rate limit hit — falling back to Gemini")
                 rate_limit_error = exc
+            elif is_rate_limit_error(exc):
+                raise LLMRateLimitError(RATE_LIMIT_MESSAGE) from exc
             else:
                 raise
 
     if gemini_api_key:
-        response = get_gemini_llm(gemini_api_key).invoke(messages)
-        routing = "fallback" if rate_limit_error else "primary"
-        _set_llm_route("gemini", GEMINI_MODEL, routing)
-        return {"messages": [response]}
+        try:
+            response, model_used = invoke_gemini(gemini_api_key, messages)
+            routing = "fallback" if rate_limit_error else "primary"
+            _set_llm_route("gemini", model_used, routing)
+            return {"messages": [response]}
+        except Exception as exc:
+            if is_rate_limit_error(exc):
+                raise LLMRateLimitError(RATE_LIMIT_MESSAGE) from exc
+            raise
 
     if rate_limit_error:
-        raise rate_limit_error
+        raise LLMRateLimitError(RATE_LIMIT_MESSAGE) from rate_limit_error
 
     raise ValueError(
         "Groq rate limit reached and no Gemini fallback is configured. Add GEMINI_API_KEY to server .env."

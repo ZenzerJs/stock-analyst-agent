@@ -7,11 +7,33 @@ export const SUGGESTED_PROMPTS = [
   'When does MSFT report earnings next?',
 ];
 
-/** Detect likely ticker symbols in chat text (1–6 alphanumeric). */
+const TICKER_STOP = new Set([
+  'I', 'A', 'AI', 'EPS', 'SEC', 'API', 'USD', 'ETF', 'CEO', 'CFO',
+  'AND', 'OR', 'THE', 'FOR', 'NOT', 'YOU', 'ARE', 'WAS', 'HAS', 'HAD',
+  'CAN', 'MAY', 'ITS', 'OUR', 'YOUR', 'WHAT', 'WHEN', 'NEXT', 'OVER',
+  'PRICE', 'CURRENT', 'ANALYST', 'CONSENSUS', 'SUMMARIZE', 'REPORT',
+  'EARNINGS', 'DOES', 'HOW', 'ABOUT', 'WITH', 'FROM', 'THAT', 'THIS',
+]);
+
+/** Detect likely ticker symbols in chat text. */
 export function detectTickerInText(text) {
-  const matches = text.toUpperCase().match(/\b[A-Z][A-Z0-9.-]{0,5}\b/g);
+  if (!text?.trim()) return null;
+  const upper = text.toUpperCase();
+
+  for (const ticker of FEATURED_TICKERS) {
+    const re = new RegExp(`\\b${ticker.replace('.', '\\.')}\\b`);
+    if (re.test(upper)) return ticker;
+  }
+
+  const possessive = upper.match(/\b([A-Z][A-Z0-9.-]{0,5})'S\b/);
+  if (possessive?.[1] && !TICKER_STOP.has(possessive[1])) {
+    return possessive[1];
+  }
+
+  const matches = upper.match(/\b[A-Z][A-Z0-9.-]{0,5}\b/g);
   if (!matches) return null;
-  const stop = new Set(['I', 'A', 'AI', 'EPS', 'SEC', 'API', 'USD', 'ETF', 'CEO', 'CFO']);
-  const candidate = [...matches].reverse().find((m) => !stop.has(m) && m.length >= 1);
+  const candidate = [...matches].reverse().find(
+    (m) => !TICKER_STOP.has(m) && m.length >= 2 && m.length <= 5,
+  );
   return candidate || null;
 }

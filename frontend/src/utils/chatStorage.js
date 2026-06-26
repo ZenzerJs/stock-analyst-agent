@@ -5,7 +5,7 @@ export const WELCOME_MESSAGE = {
   role: 'assistant',
   content:
     'Ask about live quotes, analyst ratings, earnings, or 8-quarter fundamentals. ' +
-    'Add API keys in **Settings** or `backend/.env` if chat is not working yet.',
+    'Pick a prompt below or type your question — I can pull live market data and cached filings.',
   timestamp: Date.now(),
 };
 
