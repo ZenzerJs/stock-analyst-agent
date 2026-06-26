@@ -514,6 +514,19 @@ RECOGNIZED_FIRMS: tuple[tuple[str, ...], ...] = (
     ("tigress financial",),
 )
 
+# Ignore firm notes older than this — stale change events mislead vs live consensus.
+MAX_FIRM_RATING_AGE_DAYS = 540
+
+
+def _is_recent_firm_rating(date_str: str | None) -> bool:
+    if not date_str:
+        return False
+    try:
+        rated = datetime.strptime(str(date_str)[:10], "%Y-%m-%d").date()
+        return (datetime.now().date() - rated).days <= MAX_FIRM_RATING_AGE_DAYS
+    except Exception:
+        return False
+
 
 def _firm_recognition_rank(firm: str) -> int:
     """Lower rank = more widely recognized. Unknown firms sort last."""
@@ -556,7 +569,7 @@ def _firm_rating_summary(
 
 
 def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
-    """Notable firm ratings from Yahoo Finance, prioritized by widely recognized shops."""
+    """Recent rating changes from notable firms (Yahoo Finance upgrade/downgrade feed)."""
     ticker_clean = ticker.strip().upper()
     analysis_url = f"https://finance.yahoo.com/quote/{ticker_clean}/analysis"
 
@@ -581,6 +594,9 @@ def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
             pt_value = float(price_target) if price_target and float(price_target) > 0 else None
             date_str = grade_date.strftime("%Y-%m-%d") if hasattr(grade_date, "strftime") else str(grade_date)[:10]
 
+            if not _is_recent_firm_rating(date_str):
+                continue
+
             latest_by_firm[firm] = {
                 "firm": firm,
                 "rating": rating or "—",
@@ -595,12 +611,11 @@ def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
             }
 
         candidates = list(latest_by_firm.values())
+        if not candidates:
+            return []
+
         recognized = [c for c in candidates if c["recognition_rank"] < len(RECOGNIZED_FIRMS)]
         unknown = [c for c in candidates if c["recognition_rank"] >= len(RECOGNIZED_FIRMS)]
-
-        def _sort_key(item: dict) -> tuple:
-            # Lower rank first; within the same tier, newest rating first (stable sort).
-            return (item["recognition_rank"], item["date"])
 
         recognized.sort(key=lambda c: c["date"], reverse=True)
         recognized.sort(key=lambda c: c["recognition_rank"])
@@ -641,18 +656,33 @@ def _fetch_yahoo_sentiment_fallback(ticker: str) -> dict:
     """Best-effort analyst snapshot when Finnhub recommendation breakdown is unavailable."""
     result = {"rating": None, "target_mean": None}
     try:
-        info = yf.Ticker(ticker).info or {}
+        ticker_obj = yf.Ticker(ticker)
+        info = ticker_obj.info or {}
         result["target_mean"] = info.get("targetMeanPrice")
+
+        rec_df = ticker_obj.get_recommendations()
+        if rec_df is not None and not rec_df.empty:
+            latest = rec_df.iloc[0]
+            breakdown = build_sentiment_breakdown(
+                latest.get("strongBuy", 0),
+                latest.get("buy", 0),
+                latest.get("hold", 0),
+                latest.get("sell", 0),
+                latest.get("strongSell", 0),
+            )
+            if breakdown:
+                breakdown["source"] = "yahoo_trends"
+                result.update(breakdown)
+                return result
 
         opinions = int(info.get("numberOfAnalystOpinions") or 0)
         yahoo_mean = info.get("recommendationMean")
         if opinions > 0 and yahoo_mean is not None:
             # Yahoo: 1 = Strong Buy … 5 = Strong Sell → invert to our 1–5 scale
             score = max(1.0, min(5.0, 6.0 - float(yahoo_mean)))
-            score_pct = max(0.0, min(100.0, ((score - 1) / 4) * 100))
             sb = b = h = s = ss = 0
             if score >= 4.5:
-                sb, b = opinions, 0
+                sb = opinions
             elif score >= 3.5:
                 b = opinions
             elif score >= 2.5:

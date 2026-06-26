@@ -2193,7 +2193,15 @@ body::after {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.analyst-gauge-firms-sub {
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
