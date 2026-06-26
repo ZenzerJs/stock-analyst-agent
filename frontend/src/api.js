@@ -1,6 +1,24 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+function resolveApiBaseUrl() {
+  const configured = import.meta.env.VITE_API_URL?.trim();
+  const isBrowser = typeof window !== 'undefined';
+
+  if (isBrowser) {
+    const { hostname } = window.location;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+
+    // Vercel serves the API via same-origin /api rewrite — avoids CORS to Render.
+    if (!isLocal && (hostname.endsWith('.vercel.app') || configured?.includes('onrender.com'))) {
+      return '/api';
+    }
+  }
+
+  return configured || '/api';
+}
+
+const API_URL = resolveApiBaseUrl();
+const REQUEST_TIMEOUT_MS = 90000;
 
 let keyProvider = () => ({ groq: '', finnhub: '' });
 
@@ -10,10 +28,26 @@ export function setApiKeyProvider(fn) {
 
 export const api = axios.create({
   baseURL: API_URL,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+async function withRetry(request, { attempts = 4, delayMs = 8000 } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await request();
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) => { setTimeout(resolve, delayMs); });
+      }
+    }
+  }
+  throw lastError;
+}
 
 api.interceptors.request.use((config) => {
   const { groq, finnhub } = keyProvider();
@@ -28,12 +62,12 @@ export const sendChatMessage = async (message, history = []) => {
 };
 
 export const checkHealth = async () => {
-  const response = await api.get('/health');
+  const response = await withRetry(() => api.get('/health'));
   return response.data;
 };
 
 export const fetchDashboard = async (ticker, period = '6mo') => {
-  const response = await api.get(`/dashboard/${ticker}`, { params: { period } });
+  const response = await withRetry(() => api.get(`/dashboard/${ticker}`, { params: { period } }));
   return response.data;
 };
 

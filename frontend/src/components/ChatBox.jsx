@@ -74,14 +74,19 @@ export const ChatBox = ({
       const detail = err?.response?.data?.detail;
       let content;
       if (status === 401) {
-        content = '**API key required.** Open **Settings** and add your free Groq key to enable the AI analyst.';
+        content = 'Add your Groq key in **Settings** to enable chat.';
         onOpenSettings?.();
+      } else if (status === 429) {
+        content = '**Rate limited.** Wait a moment or add your Groq key in **Settings**.';
+        onOpenSettings?.();
+      } else if (status === 503) {
+        content = "**Couldn't finish.** Try again in a moment.";
       } else if (!agentReady) {
-        content = '**Backend offline or missing API key.** Start the backend and add your Groq key in Settings.';
+        content = 'Backend offline — check connection or add your Groq key in Settings.';
       } else {
         content = detail
-          ? `**Request failed:** ${detail}`
-          : '**Request failed.** Check backend logs.';
+          ? `**Something went wrong.** ${detail}`
+          : '**Something went wrong.** Try again.';
       }
       setMessages([
         ...newMessages,

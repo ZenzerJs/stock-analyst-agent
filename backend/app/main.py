@@ -16,7 +16,13 @@ from slowapi.util import get_remote_address
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.agent import app as agent_graph, get_llm_route
+from app.agent import (
+    app as agent_graph,
+    get_llm_route,
+    LLMRateLimitError,
+    RATE_LIMIT_MESSAGE,
+    is_rate_limit_error,
+)
 from app.config import (
     set_request_keys,
     resolve_groq_key,
@@ -259,7 +265,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                             "name": msg.name,
                             "content": msg.content,
                         })
-                    elif msg.__class__.__name__ == "AIMessage":
+                    elif msg.__class__.__name__ == "AIMessage" and msg.content:
                         final_response = msg.content
                         steps.append({
                             "type": "ai_message",
@@ -268,10 +274,10 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                         })
 
         if not final_response:
-            state = agent_graph.get_state(inputs, config=run_config)
-            messages = state.values.get("messages", [])
-            if messages and messages[-1].__class__.__name__ == "AIMessage":
-                final_response = messages[-1].content
+            raise HTTPException(
+                status_code=503,
+                detail="Couldn't finish — try again.",
+            )
 
         tools_used = [
             step["name"]
@@ -294,10 +300,16 @@ async def chat_endpoint(request: Request, body: ChatRequest):
             routing=llm_route.get("routing"),
         )
 
+    except LLMRateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Chat agent failed")
+        if is_rate_limit_error(e):
+            raise HTTPException(status_code=429, detail=RATE_LIMIT_MESSAGE) from e
         detail = str(e) if not IS_PRODUCTION else "An internal error occurred."
         raise HTTPException(status_code=500, detail=detail) from e
 
