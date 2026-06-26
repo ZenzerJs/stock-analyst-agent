@@ -44,7 +44,7 @@ Charts and price history work without Finnhub (yfinance). Chat requires Groq **o
 
 See [SECURITY.md](SECURITY.md) before exposing the backend beyond localhost.
 
-**Deploy to production:** see [DEPLOY.md](DEPLOY.md) (Vercel + Railway recommended).
+**Deploy to production:** see [DEPLOY.md](DEPLOY.md) — **Vercel + Render** if Railway is already in use; Railway-only if you have a free slot.
 
 ### Option A — `backend/.env` (recommended for local dev)
 
