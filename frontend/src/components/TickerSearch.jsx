@@ -1,8 +1,50 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Search, Database, Globe, CornerDownLeft } from 'lucide-react';
 import { searchTickers } from '../api';
+import { FEATURED_TICKERS } from '../constants';
 
 const isSymbolLike = (value) => /^[A-Za-z0-9.\-]{1,8}$/.test(value.trim());
+
+const TICKER_NAMES = {
+  AAPL: 'Apple Inc.',
+  MSFT: 'Microsoft',
+  NVDA: 'NVIDIA',
+  TSLA: 'Tesla',
+  AMZN: 'Amazon',
+  META: 'Meta',
+  GOOGL: 'Alphabet',
+};
+
+function getQuickSuggestions(query) {
+  const trimmed = query.trim();
+  const q = trimmed.toUpperCase();
+
+  return FEATURED_TICKERS
+    .filter((ticker) => {
+      if (!q) return true;
+      const name = TICKER_NAMES[ticker]?.toUpperCase() || '';
+      return ticker.includes(q) || ticker.startsWith(q) || name.includes(q);
+    })
+    .map((ticker) => ({
+      ticker,
+      name: TICKER_NAMES[ticker] || null,
+      has_fundamentals: false,
+      source: 'featured',
+    }));
+}
+
+function mergeResults(apiResults, query) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const item of [...getQuickSuggestions(query), ...apiResults]) {
+    if (seen.has(item.ticker)) continue;
+    seen.add(item.ticker);
+    merged.push(item);
+  }
+
+  return merged;
+}
 
 export const TickerSearch = ({
   value,
@@ -62,14 +104,14 @@ export const TickerSearch = ({
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlight((h) => Math.min(h + 1, results.length - 1));
+      setHighlight((h) => Math.min(h + 1, displayResults.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (results[highlight]) {
-        pick(results[highlight].ticker);
+      if (displayResults[highlight]) {
+        pick(displayResults[highlight].ticker);
       } else if (query.trim() && isSymbolLike(query)) {
         pick(query.trim().toUpperCase());
       }
@@ -80,7 +122,11 @@ export const TickerSearch = ({
 
   const trimmed = query.trim();
   const canTrySymbol = trimmed && isSymbolLike(trimmed);
-  const symbolInResults = results.some(
+  const displayResults = useMemo(
+    () => mergeResults(results, query),
+    [results, query],
+  );
+  const symbolInResults = displayResults.some(
     (r) => r.ticker === trimmed.toUpperCase(),
   );
 
@@ -110,7 +156,7 @@ export const TickerSearch = ({
       {open && (
         <div className="ticker-search-dropdown" role="listbox">
           {loading && <p className="ticker-search-empty">Searching…</p>}
-          {!loading && results.length === 0 && (
+          {!loading && displayResults.length === 0 && (
             <p className="ticker-search-empty">
               {trimmed
                 ? (canTrySymbol
@@ -119,7 +165,10 @@ export const TickerSearch = ({
                 : 'Type a company name (e.g. Apple) or ticker (e.g. AAPL)'}
             </p>
           )}
-          {!loading && results.map((item, index) => (
+          {!loading && displayResults.length > 0 && !trimmed && (
+            <p className="ticker-search-hint">Popular symbols</p>
+          )}
+          {!loading && displayResults.map((item, index) => (
             <button
               key={`${item.ticker}-${item.source}-${index}`}
               type="button"
@@ -136,7 +185,11 @@ export const TickerSearch = ({
                 )}
               </div>
               <span className="ticker-search-option-meta">
-                {item.has_fundamentals ? (
+                {item.source === 'featured' ? (
+                  <span className="ticker-search-badge ticker-search-badge--market">
+                    <Globe size={11} /> Quick pick
+                  </span>
+                ) : item.has_fundamentals ? (
                   <span className="ticker-search-badge ticker-search-badge--cache">
                     <Database size={11} />
                     {item.quarters ? `${item.quarters}Q cached` : 'Fundamentals'}
