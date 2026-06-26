@@ -1,0 +1,18 @@
+# Environment & secrets
+.env
+backend/.env
+*.env.local
+
+# Python
+venv/
+__pycache__/
+*.pyc
+backend/financials.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+yfinance>=0.2.40
+pandas>=2.0.0
+fastapi>=0.110.0
+uvicorn>=0.28.0
+langgraph>=0.0.30
+langchain-core>=0.1.30
+langchain-groq>=0.1.0
+langchain-google-genai>=2.0.0
+pydantic>=2.6.0
+python-dotenv>=1.0.0
+slowapi>=0.1.9

@@ -1,0 +1,547 @@
+from langchain_core.tools import tool
+from app.database import get_quarterly_reports
+from app.config import get_finnhub_key
+import json
+import os
+import pandas as pd
+import requests
+import yfinance as yf
+from datetime import datetime, timedelta
+
+# Core financial metrics we want to highlight if present
+CORE_METRICS = {
+    "income_statement": [
+        "Total Revenue", "Revenue", "Gross Profit", "Operating Income", 
+        "Net Income", "Diluted EPS", "Basic EPS", "Operating Expense"
+    ],
+    "balance_sheet": [
+        "Total Assets", "Total Liabilities Net Minor Interest", "Total Liabilities", 
+        "Stockholders Equity", "Total Stockholders Equity", 
+        "Cash Cash Equivalents And Short Term Investments", "Cash And Cash Equivalents"
+    ],
+    "cash_flow": [
+        "Operating Cash Flow", "Cash Flow From Operating Activities", 
+        "Capital Expenditure", "Free Cash Flow", "Repayment Of Debt"
+    ]
+}
+
+@tool
+def get_quarterly_financials(ticker: str) -> str:
+    """Retrieves the last 8 quarters of financial statements (income statement, balance sheet, and cash flow) for a ticker from the local database cache."""
+    ticker_clean = ticker.strip().upper()
+    
+    # Fetch all reports for this ticker
+    reports = get_quarterly_reports(ticker_clean)
+    
+    if not reports:
+        return (
+            f"No cached quarterly financial reports found for ticker '{ticker_clean}'. "
+            f"Please verify if the ticker is correct and is one of the supported tickers in our demo database: "
+            f"AAPL, MSFT, NVDA, TSLA, AMZN, WYFI, META, GOOGL, NFLX, JPM, V. "
+            f"Note: ETFs like XDIV do not have corporate fundamental statements."
+        )
+
+    # Group reports by type
+    by_type = {}
+    for r in reports:
+        rtype = r["report_type"]
+        if rtype not in by_type:
+            by_type[rtype] = []
+        by_type[rtype].append(r)
+        
+    output_parts = [f"# Quarterly Financials for {ticker_clean}\n"]
+    
+    for rtype in ["income_statement", "balance_sheet", "cash_flow"]:
+        if rtype not in by_type:
+            output_parts.append(f"## {rtype.replace('_', ' ').title()}\nNo data available.\n")
+            continue
+            
+        # Sort reports by period ending ascending to show historical progression
+        statement_reports = sorted(by_type[rtype], key=lambda x: x["period_ending"])
+        
+        # Get all distinct keys across these quarters
+        all_metric_keys = set()
+        for r in statement_reports:
+            all_metric_keys.update(r["data"].keys())
+            
+        # Determine order of metrics: core first, then others
+        core_list = [k for k in CORE_METRICS.get(rtype, []) if k in all_metric_keys]
+        other_list = sorted([k for k in all_metric_keys if k not in core_list])
+        ordered_metrics = core_list + other_list
+        
+        # Build headers (dates)
+        dates = [r["period_ending"] for r in statement_reports]
+        headers = ["Metric"] + dates
+        
+        # Build rows
+        rows = []
+        for metric in ordered_metrics:
+            row = [metric]
+            for r in statement_reports:
+                val = r["data"].get(metric)
+                if val is None:
+                    row.append("-")
+                elif isinstance(val, (int, float)):
+                    # Format large numbers to readable string (e.g. billions or millions)
+                    if abs(val) >= 1_000_000_000:
+                        row.append(f"{val / 1_000_000_000:.2f}B")
+                    elif abs(val) >= 1_000_000:
+                        row.append(f"{val / 1_000_000:.2f}M")
+                    else:
+                        row.append(f"{val:,.2f}")
+                else:
+                    row.append(str(val))
+            rows.append(row)
+            
+        # Convert to markdown table
+        title = rtype.replace("_", " ").title()
+        table_str = f"## {title}\n\n"
+        table_str += "| " + " | ".join(headers) + " |\n"
+        table_str += "| " + " | ".join(["---"] * len(headers)) + " |\n"
+        for row in rows:
+            table_str += "| " + " | ".join(row) + " |\n"
+        table_str += "\n"
+        
+        output_parts.append(table_str)
+        
+    return "\n".join(output_parts)
+
+def fetch_quote_snapshot(ticker: str) -> dict | None:
+    """Returns structured quote data for dashboard/API use."""
+    ticker_clean = ticker.strip().upper()
+    api_key = get_finnhub_key()
+    if not api_key:
+        return None
+
+    url = f"https://finnhub.io/api/v1/quote?symbol={ticker_clean}&token={api_key}"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get("c") == 0 and data.get("o") == 0:
+            return None
+
+        return {
+            "ticker": ticker_clean,
+            "price": data.get("c"),
+            "change": data.get("d"),
+            "change_pct": data.get("dp"),
+            "high": data.get("h"),
+            "low": data.get("l"),
+            "open": data.get("o"),
+            "prev_close": data.get("pc"),
+        }
+    except Exception:
+        return None
+
+
+VALID_HISTORY_PERIODS = {"1mo", "3mo", "6mo", "1y", "2y"}
+
+
+def _split_volume(volume, high, low, close) -> tuple[int | None, int | None]:
+    """Estimate buy vs sell volume from daily OHLC (common candle-based split)."""
+    if volume is None or pd.isna(volume):
+        return None, None
+
+    vol = int(volume)
+    if high is None or low is None or close is None:
+        return vol // 2, vol - vol // 2
+    if pd.isna(high) or pd.isna(low) or pd.isna(close):
+        return vol // 2, vol - vol // 2
+
+    h, l, c = float(high), float(low), float(close)
+    if h <= l:
+        return vol // 2, vol - vol // 2
+
+    buy = int(vol * (c - l) / (h - l))
+    sell = vol - buy
+    return buy, sell
+
+
+def fetch_price_history(ticker: str, period: str = "6mo") -> dict:
+    """Returns daily close prices for charting via yfinance."""
+    ticker_clean = ticker.strip().upper()
+    range_key = period if period in VALID_HISTORY_PERIODS else "6mo"
+
+    try:
+        hist = yf.Ticker(ticker_clean).history(period=range_key, auto_adjust=True)
+        if hist.empty:
+            return {
+                "ticker": ticker_clean,
+                "period": range_key,
+                "points": [],
+                "change_pct": None,
+            }
+
+        points = []
+        for idx, row in hist.iterrows():
+            close = row.get("Close")
+            if close is None or pd.isna(close):
+                continue
+            open_val = row.get("Open")
+            high_val = row.get("High")
+            low_val = row.get("Low")
+            volume = row.get("Volume")
+            buy_vol, sell_vol = _split_volume(volume, high_val, low_val, close)
+            point = {
+                "date": idx.strftime("%Y-%m-%d"),
+                "close": round(float(close), 2),
+            }
+            if open_val is not None and not pd.isna(open_val):
+                point["open"] = round(float(open_val), 2)
+            if high_val is not None and not pd.isna(high_val):
+                point["high"] = round(float(high_val), 2)
+            if low_val is not None and not pd.isna(low_val):
+                point["low"] = round(float(low_val), 2)
+            if volume is not None and not pd.isna(volume):
+                point["volume"] = int(volume)
+            if buy_vol is not None:
+                point["buy_volume"] = buy_vol
+            if sell_vol is not None:
+                point["sell_volume"] = sell_vol
+            points.append(point)
+
+        change_pct = None
+        if len(points) >= 2:
+            start = points[0]["close"]
+            end = points[-1]["close"]
+            if start:
+                change_pct = round(((end - start) / start) * 100, 2)
+
+        return {
+            "ticker": ticker_clean,
+            "period": range_key,
+            "points": points,
+            "change_pct": change_pct,
+        }
+    except Exception:
+        return {
+            "ticker": ticker_clean,
+            "period": range_key,
+            "points": [],
+            "change_pct": None,
+        }
+
+
+def fetch_sentiment_snapshot(ticker: str) -> dict:
+    """Returns structured analyst sentiment for dashboard/API use."""
+    ticker_clean = ticker.strip().upper()
+    api_key = get_finnhub_key()
+    result = {"rating": None, "target_mean": None}
+
+    if not api_key:
+        return result
+
+    rec_url = f"https://finnhub.io/api/v1/stock/recommendation?symbol={ticker_clean}&token={api_key}"
+    target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker_clean}&token={api_key}"
+
+    try:
+        target_res = requests.get(target_url, timeout=10)
+        if target_res.status_code == 200:
+            target_data = target_res.json()
+            if target_data and target_data.get("targetMean"):
+                result["target_mean"] = target_data.get("targetMean")
+    except Exception:
+        pass
+
+    if result["target_mean"] is None:
+        try:
+            info = yf.Ticker(ticker_clean).info
+            result["target_mean"] = info.get("targetMeanPrice")
+        except Exception:
+            pass
+
+    try:
+        rec_res = requests.get(rec_url, timeout=10)
+        rec_res.raise_for_status()
+        rec_data = rec_res.json()
+        if rec_data:
+            latest = rec_data[0]
+            result["rating"] = get_consensus_label(
+                latest.get("strongBuy", 0),
+                latest.get("buy", 0),
+                latest.get("hold", 0),
+                latest.get("sell", 0),
+                latest.get("strongSell", 0),
+            )
+    except Exception:
+        pass
+
+    return result
+
+
+def fetch_earnings_snapshot(ticker: str) -> dict:
+    """Returns next upcoming earnings event for dashboard/API use."""
+    ticker_clean = ticker.strip().upper()
+    api_key = get_finnhub_key()
+    result = {"date": None, "eps_estimate": None, "hour": None}
+
+    if not api_key:
+        return result
+
+    today = datetime.now()
+    future_90 = today + timedelta(days=90)
+    url = (
+        f"https://finnhub.io/api/v1/calendar/earnings"
+        f"?from={today.strftime('%Y-%m-%d')}&to={future_90.strftime('%Y-%m-%d')}"
+        f"&symbol={ticker_clean}&token={api_key}"
+    )
+
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        earnings = response.json().get("earningsCalendar", [])
+        if earnings:
+            event = earnings[0]
+            result["date"] = event.get("date")
+            result["eps_estimate"] = event.get("epsEstimate")
+            result["hour"] = event.get("hour")
+    except Exception:
+        pass
+
+    return result
+
+
+def fetch_eps_snapshot(ticker: str) -> dict:
+    """Trailing, forward, reported, and upcoming EPS estimates."""
+    ticker_clean = ticker.strip().upper()
+    result = {
+        "trailing_eps": None,
+        "forward_eps": None,
+        "reported_eps": None,
+        "reported_eps_quarter": None,
+        "eps_estimate": None,
+        "earnings_date": None,
+    }
+
+    try:
+        info = yf.Ticker(ticker_clean).info or {}
+        trailing = info.get("trailingEps")
+        forward = info.get("forwardEps")
+        if trailing is not None:
+            result["trailing_eps"] = round(float(trailing), 2)
+        if forward is not None:
+            result["forward_eps"] = round(float(forward), 2)
+    except Exception:
+        pass
+
+    reports = get_quarterly_reports(ticker_clean, "income_statement")
+    if reports:
+        latest = max(reports, key=lambda x: x["period_ending"])
+        for key in ("Diluted EPS", "Basic EPS"):
+            val = latest["data"].get(key)
+            if val is not None and isinstance(val, (int, float)):
+                result["reported_eps"] = round(float(val), 2)
+                result["reported_eps_quarter"] = latest["period_ending"]
+                break
+
+    earnings = fetch_earnings_snapshot(ticker_clean)
+    if earnings.get("eps_estimate") is not None:
+        result["eps_estimate"] = round(float(earnings["eps_estimate"]), 2)
+    result["earnings_date"] = earnings.get("date")
+
+    return result
+
+
+def fetch_volume_flow(history: dict) -> dict | None:
+    """Aggregate buy/sell volume estimates from price history points."""
+    points = history.get("points") or []
+    if not points:
+        return None
+
+    latest = points[-1]
+    period_buy = sum(p.get("buy_volume") or 0 for p in points)
+    period_sell = sum(p.get("sell_volume") or 0 for p in points)
+    total = period_buy + period_sell
+
+    return {
+        "latest_date": latest.get("date"),
+        "latest_volume": latest.get("volume"),
+        "latest_buy_volume": latest.get("buy_volume"),
+        "latest_sell_volume": latest.get("sell_volume"),
+        "period_buy_volume": period_buy,
+        "period_sell_volume": period_sell,
+        "buy_pct": round(100 * period_buy / total, 1) if total else None,
+        "sell_pct": round(100 * period_sell / total, 1) if total else None,
+    }
+
+
+@tool
+def get_stock_price(ticker: str) -> str:
+    """Retrieves the real-time stock price and quote details for a ticker from Finnhub."""
+    ticker_clean = ticker.strip().upper()
+    snapshot = fetch_quote_snapshot(ticker_clean)
+    if not snapshot:
+        if not get_finnhub_key():
+            return "Error: FINNHUB_API_KEY is not configured on the server."
+        return f"Error: No real-time stock quote found for symbol '{ticker_clean}'."
+
+    current = snapshot["price"]
+    change = snapshot["change"]
+    pct_change = snapshot["change_pct"]
+    high = snapshot["high"]
+    low = snapshot["low"]
+    opened = snapshot["open"]
+    prev_close = snapshot["prev_close"]
+
+    return (
+        f"### Real-time Quote for {ticker_clean}\n"
+        f"- **Current Price**: ${current:,.2f}\n"
+        f"- **Change**: ${change:+,.2f} ({pct_change:+.2f}%)\n"
+        f"- **Open**: ${opened:,.2f} | **High**: ${high:,.2f} | **Low**: ${low:,.2f}\n"
+        f"- **Previous Close**: ${prev_close:,.2f}\n"
+    )
+
+def get_consensus_label(sb, b, h, s, ss):
+    total = sb + b + h + s + ss
+    if total == 0:
+        return "Unknown"
+    # Weighted average where Strong Buy=5, Buy=4, Hold=3, Sell=2, Strong Sell=1
+    score = (sb * 5 + b * 4 + h * 3 + s * 2 + ss * 1) / total
+    if score >= 4.5:
+        return "Strong Buy"
+    elif score >= 3.5:
+        return "Buy"
+    elif score >= 2.5:
+        return "Hold"
+    elif score >= 1.5:
+        return "Sell"
+    else:
+        return "Strong Sell"
+
+@tool
+def get_analyst_sentiment(ticker: str) -> str:
+    """Retrieves the analyst recommendation consensus trends and consensus target prices for a ticker from Finnhub (with free Yahoo Finance fallback for target prices)."""
+    ticker_clean = ticker.strip().upper()
+    api_key = get_finnhub_key()
+    if not api_key:
+        return "Error: FINNHUB_API_KEY is not configured on the server."
+        
+    rec_url = f"https://finnhub.io/api/v1/stock/recommendation?symbol={ticker_clean}&token={api_key}"
+    target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker_clean}&token={api_key}"
+    
+    output = [f"### Analyst Sentiment & Consensus for {ticker_clean}\n"]
+    
+    # 1. Fetch Target Prices (with yfinance fallback if forbidden/403 or empty)
+    use_yfinance_fallback = False
+    try:
+        target_res = requests.get(target_url)
+        if target_res.status_code == 200:
+            target_data = target_res.json()
+            if target_data and target_data.get("targetMean"):
+                mean = target_data.get("targetMean")
+                high = target_data.get("targetHigh")
+                low = target_data.get("targetLow")
+                median = target_data.get("targetMedian")
+                output.append(
+                    f"**Consensus Price Targets (Finnhub)**:\n"
+                    f"- **Mean Target**: ${mean:,.2f}\n"
+                    f"- **Median Target**: ${median:,.2f}\n"
+                    f"- **High Target**: ${high:,.2f} | **Low Target**: ${low:,.2f}\n"
+                )
+            else:
+                use_yfinance_fallback = True
+        else:
+            use_yfinance_fallback = True
+    except Exception:
+        use_yfinance_fallback = True
+
+    if use_yfinance_fallback:
+        try:
+            stock = yf.Ticker(ticker_clean)
+            info = stock.info
+            mean = info.get("targetMeanPrice")
+            high = info.get("targetHighPrice")
+            low = info.get("targetLowPrice")
+            median = info.get("targetMedianPrice")
+            if mean:
+                median_val = f"${median:,.2f}" if median else "N/A"
+                output.append(
+                    f"**Consensus Price Targets (Yahoo Finance Fallback)**:\n"
+                    f"- **Mean Target**: ${mean:,.2f}\n"
+                    f"- **Median Target**: {median_val}\n"
+                    f"- **High Target**: ${high:,.2f} | **Low Target**: ${low:,.2f}\n"
+                )
+            else:
+                output.append("No consensus price targets available.\n")
+        except Exception as e:
+            output.append(f"Error fetching analyst price targets via fallback: {str(e)}\n")
+        
+    # 2. Fetch Recommendation Trends
+    try:
+        rec_res = requests.get(rec_url)
+        rec_res.raise_for_status()
+        rec_data = rec_res.json()
+        
+        if rec_data:
+            latest = rec_data[0]
+            period = latest.get("period")
+            strong_buy = latest.get("strongBuy", 0)
+            buy = latest.get("buy", 0)
+            hold = latest.get("hold", 0)
+            sell = latest.get("sell", 0)
+            strong_sell = latest.get("strongSell", 0)
+            
+            output.append(
+                f"**Recommendation Trends (As of {period})**:\n"
+                f"- **Strong Buy**: {strong_buy}\n"
+                f"- **Buy**: {buy}\n"
+                f"- **Hold**: {hold}\n"
+                f"- **Sell**: {sell}\n"
+                f"- **Strong Sell**: {strong_sell}\n"
+                f"- **Consensus Rating**: {get_consensus_label(strong_buy, buy, hold, sell, strong_sell)}\n"
+            )
+        else:
+            output.append("No recommendation trend data available.\n")
+    except Exception as e:
+        output.append(f"Error fetching recommendation trends: {str(e)}\n")
+        
+    return "\n".join(output)
+
+@tool
+def get_earnings_calendar(ticker: str) -> str:
+    """Retrieves upcoming earnings dates and EPS estimates for a ticker from Finnhub within a 90-day window."""
+    ticker_clean = ticker.strip().upper()
+    api_key = get_finnhub_key()
+    if not api_key:
+        return "Error: FINNHUB_API_KEY is not configured on the server."
+        
+    today = datetime.now()
+    future_90 = today + timedelta(days=90)
+    
+    from_date = today.strftime("%Y-%m-%d")
+    to_date = future_90.strftime("%Y-%m-%d")
+    
+    url = f"https://finnhub.io/api/v1/calendar/earnings?from={from_date}&to={to_date}&symbol={ticker_clean}&token={api_key}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        earnings = data.get("earningsCalendar", [])
+        if not earnings:
+            return f"No upcoming earnings events scheduled for '{ticker_clean}' in the next 90 days."
+            
+        output = [f"### Upcoming Earnings for {ticker_clean}\n"]
+        for event in earnings:
+            date_str = event.get("date", "N/A")
+            hour = event.get("hour", "N/A") # 'amc' (after market close), 'bmo' (before market open), etc.
+            eps_est = event.get("epsEstimate")
+            revenue_est = event.get("revenueEstimate")
+            year = event.get("year", "N/A")
+            quarter = event.get("quarter", "N/A")
+            
+            hour_label = "Before Market Open" if hour == "bmo" else "After Market Close" if hour == "amc" else hour
+            eps_label = f"{eps_est:.2f}" if eps_est is not None else "N/A"
+            rev_label = f"${revenue_est / 1_000_000_000:.2f}B" if revenue_est is not None else "N/A"
+            
+            output.append(
+                f"- **Earnings Date**: {date_str} ({hour_label})\n"
+                f"- **Fiscal Quarter/Year**: Q{quarter} {year}\n"
+                f"- **Estimated EPS**: {eps_label}\n"
+                f"- **Estimated Revenue**: {rev_label}\n"
+            )
+        return "\n".join(output)
+    except Exception as e:
+        return f"Error fetching earnings calendar for {ticker_clean}: {str(e)}"
