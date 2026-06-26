@@ -37,7 +37,7 @@ from app.sources import get_trusted_sources, extract_ticker_from_steps
 from app.tickers import search_tickers, get_all_cached_tickers, get_ticker_tape, get_company_name
 from app.fundamentals import build_fundamentals_payload
 from app.ingest import ingest_ticker_data
-from app.database import has_cached_fundamentals
+from app.database import has_cached_fundamentals, init_db, DB_PATH
 from langchain_core.messages import HumanMessage, AIMessage
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,13 @@ app_fastapi = FastAPI(
 
 app_fastapi.state.limiter = limiter
 app_fastapi.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app_fastapi.on_event("startup")
+def on_startup():
+    init_db()
+    logger.info("SQLite initialized at %s", DB_PATH)
+
 
 app_fastapi.add_middleware(
     CORSMiddleware,

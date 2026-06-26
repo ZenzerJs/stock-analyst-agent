@@ -18,7 +18,9 @@ def get_db_connection():
 
 def init_db():
     """Initializes the SQLite database and creates the necessary tables."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     with get_db_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS financial_reports (
