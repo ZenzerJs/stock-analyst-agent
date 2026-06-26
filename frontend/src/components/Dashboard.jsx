@@ -113,7 +113,7 @@ export const Dashboard = ({ ticker, backendOnline, hasFinnhubKey, compact = fals
         </div>
       </div>
 
-      <AnalystRatingGauge sentiment={sentiment} loading={loading} compact={compact} />
+      <AnalystRatingGauge sentiment={sentiment} loading={loading} compact={compact} ticker={ticker} />
 
       {!compact && (
         <div className="desk-analytics-row">

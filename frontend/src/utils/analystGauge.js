@@ -18,3 +18,13 @@ export function gaugeNeedleColor(scorePct) {
 export function gaugeNeedleAngle(scorePct) {
   return -90 + (Math.max(0, Math.min(100, scorePct)) / 100) * 180;
 }
+
+export function ratingColor(rating) {
+  const label = (rating || '').toLowerCase();
+  if (label.includes('strong buy')) return '#047857';
+  if (label === 'buy' || label.includes('outperform')) return '#22c55e';
+  if (label === 'hold' || label.includes('neutral')) return '#ca8a04';
+  if (label.includes('strong sell')) return '#991b1b';
+  if (label === 'sell' || label.includes('underperform')) return '#ef4444';
+  return 'var(--text-secondary)';
+}

@@ -175,7 +175,7 @@ export const MarketView = ({ ticker, onTickerChange, hasFinnhubKey }) => {
       </div>
 
       <div className="market-analytics-row">
-        <AnalystRatingGauge sentiment={sentiment} loading={loading} />
+        <AnalystRatingGauge sentiment={sentiment} loading={loading} ticker={ticker} />
         <VolumeFlow volumeFlow={volumeFlow} period={period} loading={loading} />
         <EpsMetrics eps={eps} loading={loading} />
       </div>

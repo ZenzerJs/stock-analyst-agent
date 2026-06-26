@@ -242,10 +242,15 @@ def fetch_sentiment_snapshot(ticker: str) -> dict:
         "sufficient_sample": False,
         "source": None,
         "period": None,
+        "analysis_url": None,
+        "recent_ratings": [],
     }
 
     if not api_key:
-        return {**result, **_fetch_yahoo_sentiment_fallback(ticker_clean)}
+        merged = {**result, **_fetch_yahoo_sentiment_fallback(ticker_clean)}
+        merged["analysis_url"] = f"https://finance.yahoo.com/quote/{ticker_clean}/analysis"
+        merged["recent_ratings"] = fetch_recent_analyst_ratings(ticker_clean)
+        return merged
 
     rec_url = f"https://finnhub.io/api/v1/stock/recommendation?symbol={ticker_clean}&token={api_key}"
     target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker_clean}&token={api_key}"
@@ -292,6 +297,8 @@ def fetch_sentiment_snapshot(ticker: str) -> dict:
             if result.get(key) in (None, 0, False) and value not in (None, 0, False):
                 result[key] = value
 
+    result["analysis_url"] = f"https://finance.yahoo.com/quote/{ticker_clean}/analysis"
+    result["recent_ratings"] = fetch_recent_analyst_ratings(ticker_clean)
     return result
 
 
@@ -421,7 +428,6 @@ def get_consensus_label(sb, b, h, s, ss):
     total = sb + b + h + s + ss
     if total == 0:
         return "Unknown"
-    # Weighted average where Strong Buy=5, Buy=4, Hold=3, Sell=2, Strong Sell=1
     score = (sb * 5 + b * 4 + h * 3 + s * 2 + ss * 1) / total
     if score >= 4.5:
         return "Strong Buy"
@@ -431,8 +437,111 @@ def get_consensus_label(sb, b, h, s, ss):
         return "Hold"
     elif score >= 1.5:
         return "Sell"
-    else:
-        return "Strong Sell"
+    return "Strong Sell"
+
+
+def _normalize_grade(grade: str | None) -> str | None:
+    if not grade:
+        return None
+    normalized = grade.strip().lower()
+    mapping = {
+        "strong buy": "Strong Buy",
+        "buy": "Buy",
+        "outperform": "Buy",
+        "overweight": "Buy",
+        "hold": "Hold",
+        "neutral": "Hold",
+        "equal-weight": "Hold",
+        "market perform": "Hold",
+        "sector perform": "Hold",
+        "sell": "Sell",
+        "underperform": "Sell",
+        "underweight": "Sell",
+        "strong sell": "Strong Sell",
+    }
+    for key, label in mapping.items():
+        if key in normalized:
+            return label
+    return grade.strip().title()
+
+
+def _firm_rating_summary(
+    rating: str | None,
+    action: str | None,
+    price_target_action: str | None,
+    price_target: float | None,
+) -> str:
+    parts: list[str] = []
+    action_key = (action or "").lower()
+    pt_action = (price_target_action or "").lower()
+
+    if action_key == "upgrade":
+        parts.append("Upgrade")
+    elif action_key == "downgrade":
+        parts.append("Downgrade")
+    elif action_key == "init":
+        parts.append("Initiated coverage")
+    elif pt_action == "raises":
+        parts.append("Raises target")
+    elif pt_action == "lowers":
+        parts.append("Lowers target")
+    elif action_key in {"main", "reit"} or pt_action == "maintains":
+        parts.append("Maintains")
+
+    if rating:
+        parts.append(rating)
+    if price_target and price_target > 0:
+        parts.append(f"${price_target:,.0f} target")
+
+    return " · ".join(parts) if parts else (rating or "Rating update")
+
+
+def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
+    """Latest distinct firm ratings from Yahoo Finance (yfinance)."""
+    ticker_clean = ticker.strip().upper()
+    analysis_url = f"https://finance.yahoo.com/quote/{ticker_clean}/analysis"
+
+    try:
+        df = yf.Ticker(ticker_clean).get_upgrades_downgrades()
+        if df is None or df.empty:
+            return []
+
+        df = df.sort_index(ascending=False)
+        seen: set[str] = set()
+        results: list[dict] = []
+
+        for grade_date, row in df.iterrows():
+            firm = str(row.get("Firm") or "").strip()
+            if not firm or firm in seen:
+                continue
+            seen.add(firm)
+
+            rating = _normalize_grade(str(row.get("ToGrade") or ""))
+            previous = _normalize_grade(str(row.get("FromGrade") or "")) if row.get("FromGrade") else None
+            action = str(row.get("Action") or "").strip().lower()
+            pt_action = str(row.get("priceTargetAction") or "").strip()
+            price_target = row.get("currentPriceTarget")
+            pt_value = float(price_target) if price_target and float(price_target) > 0 else None
+            date_str = grade_date.strftime("%Y-%m-%d") if hasattr(grade_date, "strftime") else str(grade_date)[:10]
+
+            results.append(
+                {
+                    "firm": firm,
+                    "rating": rating or "—",
+                    "previous_rating": previous,
+                    "action": action or None,
+                    "price_target_action": pt_action or None,
+                    "price_target": pt_value,
+                    "date": date_str,
+                    "summary": _firm_rating_summary(rating, action, pt_action, pt_value),
+                    "url": analysis_url,
+                }
+            )
+            if len(results) >= limit:
+                break
+        return results
+    except Exception:
+        return []
 
 
 def build_sentiment_breakdown(sb: int, b: int, h: int, s: int, ss: int) -> dict | None:
