@@ -70,7 +70,7 @@ export function useFundamentals(ticker) {
       setFetchMessage(
         result.status === 'already_cached'
           ? `Loaded ${payload.quarter_count} quarters from cache`
-          : `Fetched and cached ${payload.quarter_count} quarters (saved in browser for 7 days)`,
+          : `Fetched and cached ${payload.quarter_count} quarters for this session`,
       );
       return true;
     } catch (err) {
