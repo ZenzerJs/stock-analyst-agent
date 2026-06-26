@@ -1,0 +1,26 @@
+# Render Blueprint — optional one-click deploy from repo root.
+# Manual setup: Web Service → Docker → Root Directory = backend (see DEPLOY.md).
+services:
+  - type: web
+    name: stock-analyst-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /app/data/financials.db
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+    disk:
+      name: stock-analyst-data
+      mountPath: /app/data
+      sizeGB: 1
