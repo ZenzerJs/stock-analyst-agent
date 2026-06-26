@@ -10,6 +10,7 @@ import { TickerSearch } from './TickerSearch';
 import { fetchCachedTickers } from '../api';
 import { VolumeFlow } from './VolumeFlow';
 import { EpsMetrics } from './EpsMetrics';
+import { AnalystRatingGauge } from './AnalystRatingGauge';
 import { QuarterlyFundamentals } from './QuarterlyFundamentals';
 import { FEATURED_TICKERS } from '../constants';
 
@@ -154,10 +155,6 @@ export const MarketView = ({ ticker, onTickerChange, hasFinnhubKey }) => {
               <span className="market-metric-value market-metric-value--down">{loading ? '…' : formatPrice(periodLow)}</span>
             </div>
             <div className="market-metric">
-              <span className="market-metric-label"><Target size={14} /> Consensus</span>
-              <span className="market-metric-value">{loading ? '…' : (sentiment?.rating || '—')}</span>
-            </div>
-            <div className="market-metric">
               <span className="market-metric-label"><Target size={14} /> Price target</span>
               <span className="market-metric-value">{loading ? '…' : formatPrice(sentiment?.target_mean)}</span>
             </div>
@@ -178,6 +175,7 @@ export const MarketView = ({ ticker, onTickerChange, hasFinnhubKey }) => {
       </div>
 
       <div className="market-analytics-row">
+        <AnalystRatingGauge sentiment={sentiment} loading={loading} />
         <VolumeFlow volumeFlow={volumeFlow} period={period} loading={loading} />
         <EpsMetrics eps={eps} loading={loading} />
       </div>
