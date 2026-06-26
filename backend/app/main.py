@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import threading
 from typing import List, Dict, Any, Optional, Literal
 
 from dotenv import load_dotenv
@@ -43,12 +44,48 @@ from app.sources import get_trusted_sources, extract_ticker_from_steps
 from app.tickers import search_tickers, get_all_cached_tickers, get_ticker_tape, get_company_name
 from app.fundamentals import build_fundamentals_payload
 from app.ingest import ingest_ticker_data
-from app.database import has_cached_fundamentals, init_db, DB_PATH
+from app.database import has_cached_fundamentals, init_db, DB_PATH, get_db_connection
 from langchain_core.messages import HumanMessage, AIMessage
 
 logger = logging.getLogger(__name__)
 
+PRESEED_TICKERS = [
+    t.strip().upper()
+    for t in os.getenv(
+        "PRESEED_FUNDAMENTALS_TICKERS",
+        "AAPL,MSFT,NVDA,TSLA,AMZN,META,GOOGL",
+    ).split(",")
+    if t.strip()
+]
+
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
+
+
+def _db_has_any_fundamentals() -> bool:
+    with get_db_connection() as conn:
+        row = conn.execute("SELECT 1 FROM financial_reports LIMIT 1").fetchone()
+    return row is not None
+
+
+def _preseed_fundamentals() -> None:
+    if os.getenv("PRESEED_FUNDAMENTALS", "true").lower() not in ("1", "true", "yes"):
+        return
+    if _db_has_any_fundamentals():
+        return
+
+    logger.info("Pre-seeding fundamentals cache for %s", ", ".join(PRESEED_TICKERS))
+    for ticker in PRESEED_TICKERS:
+        if has_cached_fundamentals(ticker):
+            continue
+        try:
+            result = ingest_ticker_data(ticker)
+            logger.info(
+                "Pre-seeded %s (%s quarters)",
+                ticker,
+                result.get("quarters", 0),
+            )
+        except Exception as exc:
+            logger.warning("Pre-seed failed for %s: %s", ticker, exc)
 
 app_fastapi = FastAPI(
     title="Stock Analyst Agent API",
@@ -67,6 +104,7 @@ app_fastapi.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handle
 def on_startup():
     init_db()
     logger.info("SQLite initialized at %s", DB_PATH)
+    threading.Thread(target=_preseed_fundamentals, daemon=True).start()
 
 
 app_fastapi.add_middleware(
@@ -176,7 +214,7 @@ def fundamentals_visual(ticker: str):
 
 
 @app_fastapi.post("/api/fundamentals/{ticker}/fetch")
-@limiter.limit("10/hour")
+@limiter.limit("20/hour")
 def fetch_and_cache_fundamentals(request: Request, ticker: str):
     ticker_clean = validate_ticker(ticker)
 
