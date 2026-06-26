@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Target, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Calendar, Activity } from 'lucide-react';
 import { useMarketData } from '../hooks/useMarketData';
 import { PriceChart } from './PriceChart';
 import { TrustedSources } from './TrustedSources';
 import { VolumeFlow } from './VolumeFlow';
 import { EpsMetrics } from './EpsMetrics';
+import { AnalystRatingGauge } from './AnalystRatingGauge';
 
 const formatPrice = (value) =>
   value != null ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
@@ -82,19 +83,6 @@ export const Dashboard = ({ ticker, backendOnline, hasFinnhubKey, compact = fals
 
         <div className={`stat-card ${loading ? 'stat-card--loading' : ''}`}>
           <div className="stat-card-header">
-            <Target size={16} aria-hidden="true" />
-            <span>Consensus</span>
-          </div>
-          <div className="stat-card-value stat-card-value--sm stat-card-value--rating" style={{ color: 'var(--success)' }}>
-            {loading ? '…' : (sentiment?.rating || '—')}
-          </div>
-          {!loading && sentiment?.target_mean != null && (
-            <p className="stat-card-sub">Target {formatPrice(sentiment.target_mean)}</p>
-          )}
-        </div>
-
-        <div className={`stat-card ${loading ? 'stat-card--loading' : ''}`}>
-          <div className="stat-card-header">
             <Calendar size={16} aria-hidden="true" />
             <span>Next earnings</span>
           </div>
@@ -124,6 +112,8 @@ export const Dashboard = ({ ticker, backendOnline, hasFinnhubKey, compact = fals
           {error && <p className="stat-card-sub stat-card-sub--error">{error}</p>}
         </div>
       </div>
+
+      <AnalystRatingGauge sentiment={sentiment} loading={loading} compact={compact} />
 
       {!compact && (
         <div className="desk-analytics-row">

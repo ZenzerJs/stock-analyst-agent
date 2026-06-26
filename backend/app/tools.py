@@ -228,10 +228,24 @@ def fetch_sentiment_snapshot(ticker: str) -> dict:
     """Returns structured analyst sentiment for dashboard/API use."""
     ticker_clean = ticker.strip().upper()
     api_key = get_finnhub_key()
-    result = {"rating": None, "target_mean": None}
+    result = {
+        "rating": None,
+        "target_mean": None,
+        "strong_buy": 0,
+        "buy": 0,
+        "hold": 0,
+        "sell": 0,
+        "strong_sell": 0,
+        "total_analysts": 0,
+        "score": None,
+        "score_pct": None,
+        "sufficient_sample": False,
+        "source": None,
+        "period": None,
+    }
 
     if not api_key:
-        return result
+        return {**result, **_fetch_yahoo_sentiment_fallback(ticker_clean)}
 
     rec_url = f"https://finnhub.io/api/v1/stock/recommendation?symbol={ticker_clean}&token={api_key}"
     target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker_clean}&token={api_key}"
@@ -258,15 +272,25 @@ def fetch_sentiment_snapshot(ticker: str) -> dict:
         rec_data = rec_res.json()
         if rec_data:
             latest = rec_data[0]
-            result["rating"] = get_consensus_label(
+            breakdown = build_sentiment_breakdown(
                 latest.get("strongBuy", 0),
                 latest.get("buy", 0),
                 latest.get("hold", 0),
                 latest.get("sell", 0),
                 latest.get("strongSell", 0),
             )
+            if breakdown:
+                result.update(breakdown)
+                result["source"] = "finnhub"
+                result["period"] = latest.get("period")
     except Exception:
         pass
+
+    if not result.get("total_analysts"):
+        fallback = _fetch_yahoo_sentiment_fallback(ticker_clean)
+        for key, value in fallback.items():
+            if result.get(key) in (None, 0, False) and value not in (None, 0, False):
+                result[key] = value
 
     return result
 
@@ -409,6 +433,62 @@ def get_consensus_label(sb, b, h, s, ss):
         return "Sell"
     else:
         return "Strong Sell"
+
+
+def build_sentiment_breakdown(sb: int, b: int, h: int, s: int, ss: int) -> dict | None:
+    total = int(sb or 0) + int(b or 0) + int(h or 0) + int(s or 0) + int(ss or 0)
+    if total == 0:
+        return None
+
+    score = (sb * 5 + b * 4 + h * 3 + s * 2 + ss * 1) / total
+    score_pct = max(0.0, min(100.0, ((score - 1) / 4) * 100))
+    rating = get_consensus_label(sb, b, h, s, ss)
+
+    return {
+        "rating": rating,
+        "strong_buy": int(sb or 0),
+        "buy": int(b or 0),
+        "hold": int(h or 0),
+        "sell": int(s or 0),
+        "strong_sell": int(ss or 0),
+        "total_analysts": total,
+        "score": round(score, 2),
+        "score_pct": round(score_pct, 1),
+        "sufficient_sample": total >= 10,
+    }
+
+
+def _fetch_yahoo_sentiment_fallback(ticker: str) -> dict:
+    """Best-effort analyst snapshot when Finnhub recommendation breakdown is unavailable."""
+    result = {"rating": None, "target_mean": None}
+    try:
+        info = yf.Ticker(ticker).info or {}
+        result["target_mean"] = info.get("targetMeanPrice")
+
+        opinions = int(info.get("numberOfAnalystOpinions") or 0)
+        yahoo_mean = info.get("recommendationMean")
+        if opinions > 0 and yahoo_mean is not None:
+            # Yahoo: 1 = Strong Buy … 5 = Strong Sell → invert to our 1–5 scale
+            score = max(1.0, min(5.0, 6.0 - float(yahoo_mean)))
+            score_pct = max(0.0, min(100.0, ((score - 1) / 4) * 100))
+            sb = b = h = s = ss = 0
+            if score >= 4.5:
+                sb, b = opinions, 0
+            elif score >= 3.5:
+                b = opinions
+            elif score >= 2.5:
+                h = opinions
+            elif score >= 1.5:
+                s = opinions
+            else:
+                ss = opinions
+            breakdown = build_sentiment_breakdown(sb, b, h, s, ss)
+            if breakdown:
+                breakdown["source"] = "yahoo_summary"
+                result.update(breakdown)
+    except Exception:
+        pass
+    return result
 
 @tool
 def get_analyst_sentiment(ticker: str) -> str:

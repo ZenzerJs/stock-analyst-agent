@@ -2023,11 +2023,151 @@ body::after {
 }
 
 /* —— Volume flow & EPS —— */
-.market-analytics-row,
+.market-analytics-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .desk-analytics-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+/* —— Analyst rating gauge —— */
+.analyst-gauge {
+  padding: 20px;
+}
+
+.analyst-gauge--compact {
+  padding: 14px 16px;
+}
+
+.analyst-gauge-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.analyst-gauge-header svg {
+  color: var(--cyan);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.analyst-gauge-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.analyst-gauge-sub {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.analyst-gauge-verdict {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.analyst-gauge--compact .analyst-gauge-verdict {
+  font-size: 0.82rem;
+}
+
+.analyst-gauge-warning {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.analyst-gauge-dial-wrap {
+  position: relative;
+  max-width: 320px;
+  margin: 0 auto 14px;
+}
+
+.analyst-gauge-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.analyst-gauge-tier-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.analyst-gauge-tier-label {
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  flex: 1;
+  line-height: 1.2;
+}
+
+.analyst-gauge--compact .analyst-gauge-tier-label {
+  font-size: 0.58rem;
+}
+
+.analyst-gauge-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analyst-gauge-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+}
+
+.analyst-gauge--compact .analyst-gauge-row {
+  grid-template-columns: 72px 1fr 24px;
+  gap: 8px;
+}
+
+.analyst-gauge-row-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.analyst-gauge--compact .analyst-gauge-row-label {
+  font-size: 0.68rem;
+}
+
+.analyst-gauge-row-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.analyst-gauge-row-fill {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+  transition: width 0.35s ease;
+}
+
+.analyst-gauge-row-count {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: right;
+  color: var(--text-secondary);
 }
 
 .volume-flow,
@@ -2510,6 +2650,10 @@ body::after {
   .market-analytics-row,
   .desk-analytics-row {
     grid-template-columns: 1fr;
+  }
+
+  .analyst-gauge-dial-wrap {
+    max-width: 280px;
   }
 
   .eps-metrics-grid {
