@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Database, Download, Layers, Loader2 } from 'lucide-react';
 import { useFundamentals } from '../hooks/useFundamentals';
 import { MetricBarChart } from './MetricBarChart';
-import { FundamentalsAttribution, LegalDisclaimer } from './LegalDisclaimer';
+import { FundamentalsAttribution } from './LegalDisclaimer';
 import { formatLargeNumber, formatQuarter } from '../utils/formatters';
 
 const TABS = [
@@ -115,7 +115,6 @@ export const QuarterlyFundamentals = ({ ticker, onCached }) => {
         {fetchMessage && !error && (
           <p className="fundamentals-fetch-message">{fetchMessage}</p>
         )}
-        <LegalDisclaimer compact />
       </div>
     );
   }
@@ -205,7 +204,6 @@ export const QuarterlyFundamentals = ({ ticker, onCached }) => {
       )}
 
       <FundamentalsAttribution filing={data.latest_filing} ticker={ticker} />
-      <LegalDisclaimer compact />
     </div>
   );
 };
