@@ -157,7 +157,7 @@ export const AnalystRatingGauge = ({ sentiment, loading, compact = false, ticker
       {recentRatings.length > 0 && (
         <div className="analyst-gauge-firms">
           <div className="analyst-gauge-firms-head">
-            <h4 className="analyst-gauge-firms-title">Leading firm ratings</h4>
+            <h4 className="analyst-gauge-firms-title">Leading firm actions</h4>
             {analysisUrl && (
               <a
                 href={analysisUrl}
@@ -170,6 +170,9 @@ export const AnalystRatingGauge = ({ sentiment, loading, compact = false, ticker
               </a>
             )}
           </div>
+          <p className="analyst-gauge-firms-sub">
+            Recent rating changes (last 18 mo) — may differ from consensus above
+          </p>
           <div className="analyst-gauge-firms-scroll" tabIndex={0}>
             {recentRatings.map((item) => (
               <a
