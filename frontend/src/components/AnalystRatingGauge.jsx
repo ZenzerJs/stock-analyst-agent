@@ -157,7 +157,7 @@ export const AnalystRatingGauge = ({ sentiment, loading, compact = false, ticker
       {recentRatings.length > 0 && (
         <div className="analyst-gauge-firms">
           <div className="analyst-gauge-firms-head">
-            <h4 className="analyst-gauge-firms-title">Recent firm ratings</h4>
+            <h4 className="analyst-gauge-firms-title">Leading firm ratings</h4>
             {analysisUrl && (
               <a
                 href={analysisUrl}

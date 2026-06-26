@@ -465,6 +465,65 @@ def _normalize_grade(grade: str | None) -> str | None:
     return grade.strip().title()
 
 
+# Bulge-bracket banks and widely cited research shops, highest recognition first.
+# Each tuple holds lowercase substrings matched against Yahoo Finance firm names.
+RECOGNIZED_FIRMS: tuple[tuple[str, ...], ...] = (
+    ("goldman sachs", "goldman"),
+    ("morgan stanley",),
+    ("jpmorgan", "jp morgan", "j.p. morgan"),
+    ("bank of america", "bofa", "merrill lynch", "merrill"),
+    ("citigroup", "citi "),
+    ("barclays",),
+    ("ubs",),
+    ("deutsche bank",),
+    ("wells fargo",),
+    ("credit suisse",),
+    ("hsbc",),
+    ("rbc capital", "royal bank of canada"),
+    ("bmo capital",),
+    ("jefferies",),
+    ("evercore",),
+    ("bernstein",),
+    ("wolfe research",),
+    ("mizuho",),
+    ("nomura",),
+    ("macquarie",),
+    ("truist",),
+    ("pnc",),
+    ("scotiabank",),
+    ("td securities", "td cowen", "cowen"),
+    ("raymond james",),
+    ("stifel",),
+    ("piper sandler", "piper jaffray"),
+    ("wedbush",),
+    ("needham",),
+    ("oppenheimer",),
+    ("cantor fitzgerald", "cantor"),
+    ("benchmark",),
+    ("rosenblatt",),
+    ("loop capital",),
+    ("keybanc", "key banc"),
+    ("william blair",),
+    ("baird",),
+    ("stephens",),
+    ("b. riley", "b riley"),
+    ("da davidson",),
+    ("cfra",),
+    ("argus research",),
+    ("morningstar",),
+    ("tigress financial",),
+)
+
+
+def _firm_recognition_rank(firm: str) -> int:
+    """Lower rank = more widely recognized. Unknown firms sort last."""
+    normalized = firm.strip().lower()
+    for rank, aliases in enumerate(RECOGNIZED_FIRMS):
+        if any(alias in normalized for alias in aliases):
+            return rank
+    return len(RECOGNIZED_FIRMS)
+
+
 def _firm_rating_summary(
     rating: str | None,
     action: str | None,
@@ -497,7 +556,7 @@ def _firm_rating_summary(
 
 
 def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
-    """Latest distinct firm ratings from Yahoo Finance (yfinance)."""
+    """Notable firm ratings from Yahoo Finance, prioritized by widely recognized shops."""
     ticker_clean = ticker.strip().upper()
     analysis_url = f"https://finance.yahoo.com/quote/{ticker_clean}/analysis"
 
@@ -507,14 +566,12 @@ def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
             return []
 
         df = df.sort_index(ascending=False)
-        seen: set[str] = set()
-        results: list[dict] = []
+        latest_by_firm: dict[str, dict] = {}
 
         for grade_date, row in df.iterrows():
             firm = str(row.get("Firm") or "").strip()
-            if not firm or firm in seen:
+            if not firm or firm in latest_by_firm:
                 continue
-            seen.add(firm)
 
             rating = _normalize_grade(str(row.get("ToGrade") or ""))
             previous = _normalize_grade(str(row.get("FromGrade") or "")) if row.get("FromGrade") else None
@@ -524,21 +581,34 @@ def fetch_recent_analyst_ratings(ticker: str, limit: int = 5) -> list[dict]:
             pt_value = float(price_target) if price_target and float(price_target) > 0 else None
             date_str = grade_date.strftime("%Y-%m-%d") if hasattr(grade_date, "strftime") else str(grade_date)[:10]
 
-            results.append(
-                {
-                    "firm": firm,
-                    "rating": rating or "—",
-                    "previous_rating": previous,
-                    "action": action or None,
-                    "price_target_action": pt_action or None,
-                    "price_target": pt_value,
-                    "date": date_str,
-                    "summary": _firm_rating_summary(rating, action, pt_action, pt_value),
-                    "url": analysis_url,
-                }
-            )
-            if len(results) >= limit:
-                break
+            latest_by_firm[firm] = {
+                "firm": firm,
+                "rating": rating or "—",
+                "previous_rating": previous,
+                "action": action or None,
+                "price_target_action": pt_action or None,
+                "price_target": pt_value,
+                "date": date_str,
+                "summary": _firm_rating_summary(rating, action, pt_action, pt_value),
+                "url": analysis_url,
+                "recognition_rank": _firm_recognition_rank(firm),
+            }
+
+        candidates = list(latest_by_firm.values())
+        recognized = [c for c in candidates if c["recognition_rank"] < len(RECOGNIZED_FIRMS)]
+        unknown = [c for c in candidates if c["recognition_rank"] >= len(RECOGNIZED_FIRMS)]
+
+        def _sort_key(item: dict) -> tuple:
+            # Lower rank first; within the same tier, newest rating first (stable sort).
+            return (item["recognition_rank"], item["date"])
+
+        recognized.sort(key=lambda c: c["date"], reverse=True)
+        recognized.sort(key=lambda c: c["recognition_rank"])
+        unknown.sort(key=lambda c: c["date"], reverse=True)
+
+        results = (recognized + unknown)[:limit]
+        for item in results:
+            item.pop("recognition_rank", None)
         return results
     except Exception:
         return []
