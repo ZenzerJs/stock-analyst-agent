@@ -1,0 +1,34 @@
+# Local production-like stack: backend + nginx serving the built frontend.
+# Usage:
+#   docker compose build
+#   docker compose up -d
+#   open http://localhost:8080
+
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      ENV: production
+      ALLOWED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      DATABASE_PATH: /app/data/financials.db
+    volumes:
+      - backend-data:/app/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-data:
