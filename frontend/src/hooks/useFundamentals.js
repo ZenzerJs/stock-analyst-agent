@@ -70,12 +70,21 @@ export function useFundamentals(ticker) {
       setFetchMessage(
         result.status === 'already_cached'
           ? `Loaded ${payload.quarter_count} quarters from cache`
-          : `Fetched and cached ${payload.quarter_count} quarters for this session`,
+          : `Fetched and cached ${payload.quarter_count} quarters (saved in browser for 7 days)`,
       );
       return true;
     } catch (err) {
+      const status = err?.response?.status;
       const detail = err?.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : 'Could not fetch fundamentals');
+      if (status === 429) {
+        setError('Too many fetch requests — wait a minute and try again.');
+      } else if (status === 404) {
+        setError(typeof detail === 'string' ? detail : 'No quarterly data for this symbol');
+      } else if (err?.code === 'ECONNABORTED') {
+        setError('Fetch timed out — try again (first load can take up to a minute).');
+      } else {
+        setError(typeof detail === 'string' ? detail : 'Could not fetch fundamentals');
+      }
       return false;
     } finally {
       setFetching(false);

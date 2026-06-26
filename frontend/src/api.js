@@ -97,6 +97,9 @@ export const fetchFundamentals = async (ticker) => {
 };
 
 export const fetchAndCacheFundamentals = async (ticker) => {
-  const response = await api.post(`/fundamentals/${ticker}/fetch`);
+  const response = await withRetry(
+    () => api.post(`/fundamentals/${ticker}/fetch`, null, { timeout: 120000 }),
+    { attempts: 2, delayMs: 3000 },
+  );
   return response.data;
 };
