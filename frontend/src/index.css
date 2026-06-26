@@ -2516,3 +2516,130 @@ body::after {
     grid-template-columns: 1fr;
   }
 }
+
+/* Phone — compact header, hide footer, reclaim vertical space */
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .app-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .app-brand-title {
+    font-size: 0.88rem;
+    letter-spacing: -0.02em;
+  }
+
+  .app-brand-eyebrow {
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+  }
+
+  .app-header-search {
+    max-width: none;
+  }
+
+  .ticker-search-input-wrap {
+    height: 40px;
+    padding: 0 12px;
+  }
+
+  .ticker-search-input {
+    font-size: 0.88rem;
+  }
+
+  .ticker-search-kbd {
+    display: none;
+  }
+
+  .app-tabs {
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .app-tab {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+
+  .app-header-actions {
+    gap: 8px;
+  }
+
+  .api-key-btn {
+    padding: 8px 11px;
+    font-size: 0.78rem;
+  }
+
+  .app-status {
+    font-size: 0.78rem;
+  }
+
+  .app-status span:last-child {
+    display: none;
+  }
+
+  .ticker-tape {
+    display: none;
+  }
+
+  .byok-banner {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .app-shell > .legal-disclaimer {
+    display: none;
+  }
+
+  .market-container,
+  .chat-only-container,
+  .app-container {
+    min-height: 0;
+  }
+
+  .dashboard {
+    max-height: 38dvh;
+  }
+
+  .market-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quarterly-fundamentals-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .quarterly-fundamentals-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .chat-title {
+    font-size: 1rem;
+  }
+
+  .chat-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .prompt-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .prompt-chip {
+    flex-shrink: 0;
+    max-width: 85vw;
+    font-size: 0.78rem;
+  }
+}
