@@ -25,9 +25,12 @@ CORE_METRICS = {
     ]
 }
 
+# Agent tool output stays small: recent quarters + headline metrics only.
+MAX_QUARTERLY_PERIODS = 4
+
 @tool
 def get_quarterly_financials(ticker: str) -> str:
-    """Retrieves the last 8 quarters of financial statements (income statement, balance sheet, and cash flow) for a ticker from the local database cache."""
+    """Retrieves the last 4 quarters of core financial metrics (revenue, net income, EPS, cash flow, etc.) for a ticker from the local database cache."""
     ticker_clean = ticker.strip().upper()
     
     # Fetch all reports for this ticker
@@ -49,25 +52,24 @@ def get_quarterly_financials(ticker: str) -> str:
             by_type[rtype] = []
         by_type[rtype].append(r)
         
-    output_parts = [f"# Quarterly Financials for {ticker_clean}\n"]
+    output_parts = [f"# Quarterly Financials for {ticker_clean} (last {MAX_QUARTERLY_PERIODS} quarters, core metrics)\n"]
     
     for rtype in ["income_statement", "balance_sheet", "cash_flow"]:
         if rtype not in by_type:
             output_parts.append(f"## {rtype.replace('_', ' ').title()}\nNo data available.\n")
             continue
             
-        # Sort reports by period ending ascending to show historical progression
-        statement_reports = sorted(by_type[rtype], key=lambda x: x["period_ending"])
+        # Most recent quarters only
+        statement_reports = sorted(by_type[rtype], key=lambda x: x["period_ending"])[-MAX_QUARTERLY_PERIODS:]
         
-        # Get all distinct keys across these quarters
-        all_metric_keys = set()
-        for r in statement_reports:
-            all_metric_keys.update(r["data"].keys())
-            
-        # Determine order of metrics: core first, then others
-        core_list = [k for k in CORE_METRICS.get(rtype, []) if k in all_metric_keys]
-        other_list = sorted([k for k in all_metric_keys if k not in core_list])
-        ordered_metrics = core_list + other_list
+        # Core headline metrics only — avoids flooding the agent context
+        ordered_metrics = [
+            k for k in CORE_METRICS.get(rtype, [])
+            if any(k in r["data"] for r in statement_reports)
+        ]
+        if not ordered_metrics:
+            output_parts.append(f"## {rtype.replace('_', ' ').title()}\nNo core metrics available.\n")
+            continue
         
         # Build headers (dates)
         dates = [r["period_ending"] for r in statement_reports]
