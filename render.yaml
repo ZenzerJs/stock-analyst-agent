@@ -21,7 +21,7 @@ services:
       - key: FINNHUB_API_KEY
         sync: false
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://stock-analyst-agent-ashen.vercel.app
     disk:
       name: stock-analyst-data
       mountPath: /app/data
