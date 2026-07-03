@@ -2,39 +2,28 @@ name: Daily Market Data Refresh
 
 on:
   schedule:
-    # 13:30 UTC ≈ 8:30 AM ET (EST) / 9:30 AM EDT — weekdays only
     - cron: "30 13 * * 1-5"
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install yfinance pandas
+      - run: pip install yfinance pandas
 
-      - name: Refresh market snapshot
-        run: python backend/scripts/update_market_cache.py
+      - run: python scripts/update_market_cache.py
 
-      - name: Commit and push if data changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market/latest.json data/market/daily/
-          if git diff --cached --quiet; then
-            echo "No market data changes to commit."
-            exit 0
-          fi
-          git commit -F data/market/.commit-message.txt
+      - run: |
+          git config user.name "ZenzerJs"
+          git config user.email "12345678+JaydenSaha@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "market: $(date +%Y-%m-%d) update"
           git push

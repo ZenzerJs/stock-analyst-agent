@@ -12,7 +12,7 @@ from typing import Any
 
 import yfinance as yf
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "data" / "market"
 LATEST_PATH = DATA_DIR / "latest.json"
 COMMIT_MSG_PATH = DATA_DIR / ".commit-message.txt"
@@ -128,48 +128,6 @@ def _snapshot_changed(prev: dict[str, Any] | None, current: dict[str, Any]) -> b
     return False
 
 
-def _format_pct(value: float | None) -> str:
-    if value is None:
-        return "n/a"
-    sign = "+" if value > 0 else ""
-    return f"{sign}{value:.2f}%"
-
-
-def _build_commit_message(snapshot: dict[str, Any], previous: dict[str, Any] | None) -> str:
-    today = date.today().isoformat()
-    tickers = snapshot.get("tickers") or {}
-    prev_tickers = (previous or {}).get("tickers") or {}
-
-    move_bits: list[str] = []
-    for symbol in DEFAULT_TICKERS:
-        row = tickers.get(symbol) or {}
-        prev = prev_tickers.get(symbol) or {}
-        change = row.get("change_pct")
-        if change is not None:
-            move_bits.append(f"{symbol} {_format_pct(change)}")
-        elif row.get("price") is not None and prev.get("price") is not None:
-            old_p = float(prev["price"])
-            new_p = float(row["price"])
-            if old_p:
-                delta = round(((new_p - old_p) / old_p) * 100, 2)
-                move_bits.append(f"{symbol} {_format_pct(delta)} since last run")
-
-    earnings_bits: list[str] = []
-    for symbol in DEFAULT_TICKERS:
-        row = tickers.get(symbol) or {}
-        days = row.get("days_to_earnings")
-        if days is not None and 0 <= days <= 7:
-            label = "today" if days == 0 else f"in {days}d"
-            earnings_bits.append(f"{symbol} earnings {label}")
-
-    highlights = move_bits[:3]
-    if earnings_bits:
-        highlights.append(earnings_bits[0])
-
-    summary = ", ".join(highlights) if highlights else "quotes refreshed"
-    return f"market: {today} {summary}"
-
-
 def build_snapshot() -> dict[str, Any]:
     tickers: dict[str, Any] = {}
     errors: list[str] = []
@@ -212,10 +170,6 @@ def main() -> int:
     daily_path = DAILY_DIR / f"{snapshot['market_date']}.json"
     daily_path.write_text(payload, encoding="utf-8")
 
-    commit_message = _build_commit_message(snapshot, previous)
-    COMMIT_MSG_PATH.write_text(commit_message + "\n", encoding="utf-8")
-
-    print(commit_message)
     if snapshot.get("errors"):
         print("Partial errors:", "; ".join(snapshot["errors"]))
     return 0
