@@ -1,111 +1,134 @@
-# Stock Analyst Agent
+# 📊 Stock Analyst Agent
 
-Local AI stock research desk — chat analyst, live charts, trusted source links, and 8-quarter fundamentals cache.
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-## Quick start
+> An AI-powered equity research and financial analytics agent workspace. Combines real-time market data caching, financial statement analysis, interactive technical charts, and LLM-driven investment consensus ratings.
 
-**Prerequisites:** Python 3.10+, Node.js 18+
+---
 
-```powershell
-# 1. Clone and enter the repo
-cd stock-analyst-agent
+## 🌟 Key Features
 
-# 2. Python environment (one time)
+- **Interactive Financial Dashboard**: Clean, real-time market dashboard (`/frontend`) featuring live stock price charts, volume flow metrics, and ticker tapes.
+- **AI Financial Analyst Consensus**: Interactive analyst rating gauges (`AnalystRatingGauge.jsx`), EPS growth metrics (`EpsMetrics.jsx`), and quarterly fundamentals breakdown (`QuarterlyFundamentals.jsx`).
+- **Dynamic LLM Routing**: Intelligently routes financial queries across multiple LLM providers with visible routing status badges (`LlmRouteBadge.jsx`).
+- **Daily Market Data Cache**: Automated market caching engine (`/data/market` and `/scripts/update_market_cache.py`) to reduce external API dependency and latency.
+- **Production Containerization**: Complete `docker-compose.yml`, `Dockerfile`, `render.yaml`, and Nginx configuration for effortless cloud deployment.
+
+---
+
+## 🏗️ Repository Architecture
+
+```text
+stock-analyst-agent/
+├── backend/                # FastAPI application & financial analysis routes
+├── frontend/               # Vite + React 19 single-page financial dashboard
+│   ├── src/
+│   │   ├── components/     # UI widgets (PriceChart, AnalystGauge, ChatBox, EpsMetrics)
+│   │   ├── hooks/          # Custom hooks (useMarketData, useFundamentals, useChatHistory)
+│   │   └── utils/          # Market calculations, formatting, and LLM routing logic
+│   └── package.json        # Frontend dependencies
+├── data/market/            # Daily cached market datasets & JSON snapshots
+├── deploy/                 # Production Nginx reverse-proxy configuration
+├── scripts/                # Python data collection and market cache updater scripts
+├── docker-compose.yml      # Multi-container service orchestration
+├── Dockerfile              # Backend container build script
+├── Dockerfile.web          # Frontend container build script
+├── DEPLOY.md               # Deployment and cloud hosting instructions
+└── SECURITY.md             # Security policies & API key handling guardrails
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js**: `v18.0.0+`
+- **Python**: `3.10+`
+- **Docker & Docker Compose** *(optional)*
+
+---
+
+### Quick Start with Docker Compose
+
+Run the entire backend and frontend stack with a single command:
+
+```bash
+docker-compose up --build
+```
+
+Access the financial dashboard at [http://localhost:3000](http://localhost:3000).
+
+---
+
+### Local Development Setup
+
+#### 1. Backend Service (FastAPI)
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create & activate virtual environment
 python -m venv venv
-.\venv\Scripts\pip install -r backend\requirements.txt
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
 
-# 3. API keys — see below
-copy backend\.env.example backend\.env
-# Edit backend\.env with your keys
+# Install dependencies
+pip install -r requirements.txt
 
-# 4. Optional: seed fundamentals cache
-.\venv\Scripts\python.exe backend\scripts\ingest_financials.py
+# Start backend server
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
 
-# 5. Run (two terminals)
+On Windows, you can also launch the backend via:
+```powershell
 .\start-backend.ps1
+```
+
+#### 2. Frontend Application (Vite + React)
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start Vite dev server
+npm run dev
+```
+
+On Windows, you can also launch the frontend via:
+```powershell
 .\start-frontend.ps1
 ```
 
-Open **http://localhost:5173**
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## API keys (required for AI chat)
+## 📈 Market Data Pipeline
 
-This repo does **not** ship with API keys. After cloning, you need your own free keys:
+Refresh daily stock cache manually or schedule automated background sync:
 
-| Key | Get it | Used for |
-|-----|--------|----------|
-| **Groq** | [console.groq.com/keys](https://console.groq.com/keys) | AI analyst chat (primary) |
-| **Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Fallback when Groq rate-limits *(optional)* |
-| **Finnhub** | [finnhub.io/register](https://finnhub.io/register) | Live quotes, ratings, earnings *(optional)* |
-
-Charts and price history work without Finnhub (yfinance). Chat requires Groq **or** Gemini on the server.
-
-See [SECURITY.md](SECURITY.md) before exposing the backend beyond localhost.
-
-**Deploy to production:** see [DEPLOY.md](DEPLOY.md) — **Vercel + Render** if Railway is already in use; Railway-only if you have a free slot.
-
-### Option A — `backend/.env` (recommended for local dev)
-
-```powershell
-copy backend\.env.example backend\.env
-```
-
-Edit `backend/.env`:
-
-```env
-GROQ_API_KEY=gsk_your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
-FINNHUB_API_KEY=your_finnhub_key_here
-```
-
-`backend/.env` is gitignored — never commit it.
-
-### Option B — In-app Settings (browser)
-
-Click **API keys** in the header and paste keys there. Stored in your browser only (`localStorage`). Useful if you deploy the frontend without putting secrets on the server.
-
-You can use both: `.env` is the server fallback; Settings overrides per browser session.
-
----
-
-## What you get
-
-- **Research desk** — sidebar charts + AI chat
-- **Markets** — full-screen charts, ticker switcher, metrics
-- **Chat** — persistent history, agent reasoning steps, source links
-- **Backend** — FastAPI + LangGraph agent, 4 tools (fundamentals, price, sentiment, earnings)
-
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:8000 |
-| Swagger docs | http://localhost:8000/docs |
-
----
-
-## Project layout
-
-```
-stock-analyst-agent/
-├── backend/          # FastAPI + LangGraph + SQLite cache
-├── frontend/         # Vite + React UI
-├── start-backend.ps1
-├── start-frontend.ps1
-└── backend/.env.example   # template only — copy to .env
+```bash
+python scripts/update_market_cache.py
 ```
 
 ---
 
-## Supported tickers
+## 🛠️ Verification & Scripts
 
-Fundamentals cache: `AAPL`, `MSFT`, `NVDA`, `TSLA`, `AMZN`, `META`, `GOOGL`, `NFLX`, `JPM`, `V`, `WYFI`
-
-Any ticker works for live price/sentiment/earnings when Finnhub is configured.
+| Command | Action |
+| :--- | :--- |
+| `npm run dev` (in `/frontend`) | Starts Vite development server |
+| `npm run build` (in `/frontend`) | Compiles production web bundle |
+| `npm run preview` (in `/frontend`) | Previews production build locally |
 
 ---
 
-## Disclaimer
-
-Not financial advice. Data from third-party APIs and cached filings. Verify on linked sources (Yahoo Finance, SEC EDGAR, etc.) before making decisions.
+*Developed by [ZenzerJs](https://github.com/ZenzerJs)*
