@@ -1,134 +1,79 @@
-# 📊 Stock Analyst Agent
+# AI Stock Analyst Agent
 
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+Full-stack AI research agent that synthesizes SEC 10-K/10-Q filings, historical market pricing, and live analyst sentiment into source-backed equity reports — with every claim traceable to its underlying source.
 
-> An AI-powered equity research and financial analytics agent workspace. Combines real-time market data caching, financial statement analysis, interactive technical charts, and LLM-driven investment consensus ratings.
+> **Architecture note:** the core of this project is the **Python backend** — a FastAPI service running a stateful LangGraph agent. The React frontend is a lightweight dashboard for chat, charts, and API key management.
 
----
+## How It Works
 
-## 🌟 Key Features
+1. **Agent orchestration** — a LangGraph `StateGraph` in `backend/app/agent.py` coordinates stateful tool-calling workflows: the agent plans, calls research tools, and folds results back into shared state between steps.
+2. **Grounded research tools** — `backend/app/tools.py` and `backend/app/sources.py` fetch and attribute SEC 10-K/10-Q filings, historical price data, and analyst sentiment. `backend/app/filing_attribution.py` ties each claim in the final report back to its filing source.
+3. **Market data pipeline** — daily market snapshots are cached under `data/market/` and refreshed by `scripts/update_market_cache.py`, so the agent isn't hammering external APIs on every query.
+4. **LLM routing with fallback** — Groq-first routing (see `frontend/src/utils/llmRouting.js` and `backend/app/config.py`) falls back between providers and handles rate limits gracefully instead of failing mid-research.
+5. **BYOK, server-side only** — bring your own API keys; they're validated and stored per-session and never leave the server (`backend/app/security.py`). The frontend never touches a provider directly.
 
-- **Interactive Financial Dashboard**: Clean, real-time market dashboard (`/frontend`) featuring live stock price charts, volume flow metrics, and ticker tapes.
-- **AI Financial Analyst Consensus**: Interactive analyst rating gauges (`AnalystRatingGauge.jsx`), EPS growth metrics (`EpsMetrics.jsx`), and quarterly fundamentals breakdown (`QuarterlyFundamentals.jsx`).
-- **Dynamic LLM Routing**: Intelligently routes financial queries across multiple LLM providers with visible routing status badges (`LlmRouteBadge.jsx`).
-- **Daily Market Data Cache**: Automated market caching engine (`/data/market` and `/scripts/update_market_cache.py`) to reduce external API dependency and latency.
-- **Production Containerization**: Complete `docker-compose.yml`, `Dockerfile`, `render.yaml`, and Nginx configuration for effortless cloud deployment.
+## Tech Stack
 
----
+| Layer | Tech |
+|---|---|
+| Agent & backend | Python, FastAPI, LangGraph, Groq (with provider fallback) |
+| Frontend | React (JavaScript), custom dashboard components |
+| Data | SEC EDGAR filings, cached market pricing, analyst sentiment |
+| Infra | Docker, docker-compose, Render (`render.yaml`) |
 
-## 🏗️ Repository Architecture
+## Key Components
 
-```text
-stock-analyst-agent/
-├── backend/                # FastAPI application & financial analysis routes
-├── frontend/               # Vite + React 19 single-page financial dashboard
-│   ├── src/
-│   │   ├── components/     # UI widgets (PriceChart, AnalystGauge, ChatBox, EpsMetrics)
-│   │   ├── hooks/          # Custom hooks (useMarketData, useFundamentals, useChatHistory)
-│   │   └── utils/          # Market calculations, formatting, and LLM routing logic
-│   └── package.json        # Frontend dependencies
-├── data/market/            # Daily cached market datasets & JSON snapshots
-├── deploy/                 # Production Nginx reverse-proxy configuration
-├── scripts/                # Python data collection and market cache updater scripts
-├── docker-compose.yml      # Multi-container service orchestration
-├── Dockerfile              # Backend container build script
-├── Dockerfile.web          # Frontend container build script
-├── DEPLOY.md               # Deployment and cloud hosting instructions
-└── SECURITY.md             # Security policies & API key handling guardrails
+```
+backend/
+  app/
+    agent.py               # LangGraph StateGraph agent orchestration
+    main.py                # FastAPI app and routes
+    tools.py               # Research tools (filings, pricing, sentiment)
+    sources.py             # Source fetching and attribution
+    filing_attribution.py  # Maps report claims back to SEC filings
+    tickers.py             # Ticker resolution
+    security.py            # BYOK key handling, server-side only
+    config.py              # Provider routing and configuration
+  scripts/
+    test_agent.py          # Agent smoke tests
+scripts/
+  update_market_cache.py   # Market data snapshot refresher
+frontend/
+  src/
+    App.jsx                # React app shell
+    components/            # Dashboard, PriceChart, MarketView,
+                           # AnalystRatingGauge, ChatBox, ApiKeySettings
+    utils/llmRouting.js    # Provider fallback routing
+data/
+  market/                  # Cached daily + latest market snapshots
 ```
 
----
+## Getting Started
 
-## 🚀 Getting Started
+### Local (Windows PowerShell helpers)
 
-### Prerequisites
+```powershell
+./start-backend.ps1    # FastAPI backend (see DEPLOY.md for env vars)
+./start-frontend.ps1   # React frontend
+```
 
-- **Node.js**: `v18.0.0+`
-- **Python**: `3.10+`
-- **Docker & Docker Compose** *(optional)*
+Set your provider API keys in `backend/.env` (see `backend/.env.example`).
 
----
-
-### Quick Start with Docker Compose
-
-Run the entire backend and frontend stack with a single command:
+### Docker
 
 ```bash
 docker-compose up --build
 ```
 
-Access the financial dashboard at [http://localhost:3000](http://localhost:3000).
+The repo includes `Dockerfile` (backend), `Dockerfile.web` (frontend), and `render.yaml` for one-click Render deploys — full instructions in [DEPLOY.md](DEPLOY.md).
 
----
+## Security
 
-### Local Development Setup
+- BYOK credentials are handled strictly server-side and never exposed to the browser
+- See [SECURITY.md](SECURITY.md) for reporting and hardening notes
 
-#### 1. Backend Service (FastAPI)
+## Status
 
-```bash
-# Navigate to backend directory
-cd backend
+Built and deployed summer 2026; actively maintained. Contributions and issue reports welcome.
 
-# Create & activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start backend server
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-On Windows, you can also launch the backend via:
-```powershell
-.\start-backend.ps1
-```
-
-#### 2. Frontend Application (Vite + React)
-
-```bash
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start Vite dev server
-npm run dev
-```
-
-On Windows, you can also launch the frontend via:
-```powershell
-.\start-frontend.ps1
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
-
-## 📈 Market Data Pipeline
-
-Refresh daily stock cache manually or schedule automated background sync:
-
-```bash
-python scripts/update_market_cache.py
-```
-
----
-
-## 🛠️ Verification & Scripts
-
-| Command | Action |
-| :--- | :--- |
-| `npm run dev` (in `/frontend`) | Starts Vite development server |
-| `npm run build` (in `/frontend`) | Compiles production web bundle |
-| `npm run preview` (in `/frontend`) | Previews production build locally |
-
----
-
-*Developed by [ZenzerJs](https://github.com/ZenzerJs)*
+<!-- TODO: add live demo link once the Vercel deployment is back up -->
