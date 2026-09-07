@@ -75,5 +75,3 @@ The repo includes `Dockerfile` (backend), `Dockerfile.web` (frontend), and `rend
 ## Status
 
 Built and deployed summer 2026; actively maintained. Contributions and issue reports welcome.
-
-<!-- TODO: add live demo link once the Vercel deployment is back up -->
