@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-10-09",
+  "market_date": "2026-10-12",
   "tickers": {
     "AAPL": {
-      "change_pct": -0.8,
-      "days_to_earnings": 24,
+      "change_pct": 1.29,
+      "days_to_earnings": 21,
       "name": "Apple Inc.",
       "next_earnings": "2026-11-02",
-      "prev_close": 340.42,
-      "price": 337.71,
-      "volume": 26095070
+      "prev_close": 336.64,
+      "price": 340.97,
+      "volume": 25796997
     },
     "AMZN": {
-      "change_pct": 2.83,
-      "days_to_earnings": 20,
+      "change_pct": -1.11,
+      "days_to_earnings": 17,
       "name": "Amazon.com, Inc.",
       "next_earnings": "2026-10-29",
-      "prev_close": 254.06,
-      "price": 261.26,
-      "volume": 22621983
+      "prev_close": 262.43,
+      "price": 259.53,
+      "volume": 25322105
     },
     "MSFT": {
-      "change_pct": 2.64,
-      "days_to_earnings": 19,
+      "change_pct": 1.14,
+      "days_to_earnings": 16,
       "name": "Microsoft Corporation",
       "next_earnings": "2026-10-28",
-      "prev_close": 522.61,
-      "price": 536.385,
-      "volume": 11433694
+      "prev_close": 535.07,
+      "price": 541.15,
+      "volume": 18227041
     },
     "NVDA": {
-      "change_pct": -0.42,
-      "days_to_earnings": 39,
+      "change_pct": -1.29,
+      "days_to_earnings": 36,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 230.48,
-      "price": 229.52,
-      "volume": 57510267
+      "prev_close": 229.28,
+      "price": 226.32,
+      "volume": 69908781
     },
     "TSLA": {
-      "change_pct": 2.48,
-      "days_to_earnings": 12,
+      "change_pct": -1.22,
+      "days_to_earnings": 9,
       "name": "Tesla, Inc.",
       "next_earnings": "2026-10-21",
-      "prev_close": 375.0,
-      "price": 384.295,
-      "volume": 32337914
+      "prev_close": 382.7,
+      "price": 378.03,
+      "volume": 20131780
     }
   },
-  "updated_at": "2026-10-09T18:55:11+00:00"
+  "updated_at": "2026-10-12T21:49:00+00:00"
 }
