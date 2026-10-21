@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-10-20",
+  "market_date": "2026-10-21",
   "tickers": {
     "AAPL": {
-      "change_pct": -0.88,
-      "days_to_earnings": 13,
+      "change_pct": 1.97,
+      "days_to_earnings": 12,
       "name": "Apple Inc.",
       "next_earnings": "2026-11-02",
-      "prev_close": 343.04,
-      "price": 340.005,
-      "volume": 17275598
+      "prev_close": 338.0,
+      "price": 344.67,
+      "volume": 17997837
     },
     "AMZN": {
-      "change_pct": -0.21,
-      "days_to_earnings": 9,
+      "change_pct": 0.24,
+      "days_to_earnings": 8,
       "name": "Amazon.com, Inc.",
       "next_earnings": "2026-10-29",
-      "prev_close": 263.2,
-      "price": 262.64,
-      "volume": 21060769
+      "prev_close": 263.46,
+      "price": 264.09,
+      "volume": 19208889
     },
     "MSFT": {
-      "change_pct": -0.03,
-      "days_to_earnings": 8,
+      "change_pct": 0.8,
+      "days_to_earnings": 7,
       "name": "Microsoft Corporation",
       "next_earnings": "2026-10-28",
-      "prev_close": 532.6,
-      "price": 532.43,
-      "volume": 6818504
+      "prev_close": 528.55,
+      "price": 532.77,
+      "volume": 6844471
     },
     "NVDA": {
-      "change_pct": -0.0,
-      "days_to_earnings": 28,
+      "change_pct": 0.22,
+      "days_to_earnings": 27,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 217.18,
-      "price": 217.18,
-      "volume": 50101970
+      "prev_close": 221.0,
+      "price": 221.49,
+      "volume": 52206587
     },
     "TSLA": {
-      "change_pct": 1.48,
-      "days_to_earnings": 1,
+      "change_pct": 1.73,
+      "days_to_earnings": 0,
       "name": "Tesla, Inc.",
       "next_earnings": "2026-10-21",
-      "prev_close": 368.8299,
-      "price": 374.3001,
-      "volume": 21220500
+      "prev_close": 380.45,
+      "price": 387.05,
+      "volume": 29180626
     }
   },
-  "updated_at": "2026-10-20T18:04:13+00:00"
+  "updated_at": "2026-10-21T18:10:18+00:00"
 }
