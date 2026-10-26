@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-10-23",
+  "market_date": "2026-10-26",
   "tickers": {
     "AAPL": {
-      "change_pct": -0.65,
-      "days_to_earnings": 10,
+      "change_pct": -1.16,
+      "days_to_earnings": 7,
       "name": "Apple Inc.",
       "next_earnings": "2026-11-02",
-      "prev_close": 348.6,
-      "price": 346.32,
-      "volume": 24741389
+      "prev_close": 347.61,
+      "price": 343.575,
+      "volume": 22294444
     },
     "AMZN": {
-      "change_pct": -0.8,
-      "days_to_earnings": 6,
+      "change_pct": -0.1,
+      "days_to_earnings": 3,
       "name": "Amazon.com, Inc.",
       "next_earnings": "2026-10-29",
-      "prev_close": 250.81,
-      "price": 248.815,
-      "volume": 15380781
+      "prev_close": 248.78,
+      "price": 248.52,
+      "volume": 22255338
     },
     "MSFT": {
-      "change_pct": 0.43,
-      "days_to_earnings": 5,
+      "change_pct": 1.22,
+      "days_to_earnings": 2,
       "name": "Microsoft Corporation",
       "next_earnings": "2026-10-28",
-      "prev_close": 522.0,
-      "price": 524.2401,
-      "volume": 7380430
+      "prev_close": 524.9113,
+      "price": 531.3175,
+      "volume": 10562033
     },
     "NVDA": {
-      "change_pct": -0.26,
-      "days_to_earnings": 25,
+      "change_pct": 2.56,
+      "days_to_earnings": 22,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 212.3831,
-      "price": 211.8349,
-      "volume": 45760981
+      "prev_close": 211.114,
+      "price": 216.515,
+      "volume": 64010012
     },
     "TSLA": {
-      "change_pct": -0.52,
-      "days_to_earnings": -2,
+      "change_pct": 5.8,
+      "days_to_earnings": -5,
       "name": "Tesla, Inc.",
       "next_earnings": "2026-10-21",
-      "prev_close": 373.35,
-      "price": 371.39,
-      "volume": 26481344
+      "prev_close": 372.22,
+      "price": 393.805,
+      "volume": 42754808
     }
   },
-  "updated_at": "2026-10-23T17:56:00+00:00"
+  "updated_at": "2026-10-26T19:29:26+00:00"
 }
