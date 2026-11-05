@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-11-04",
+  "market_date": "2026-11-05",
   "tickers": {
     "AAPL": {
-      "change_pct": 6.62,
-      "days_to_earnings": 85,
+      "change_pct": -1.28,
+      "days_to_earnings": 84,
       "name": "Apple Inc.",
       "next_earnings": "2027-01-28",
-      "prev_close": 330.28,
-      "price": 352.15,
-      "volume": 61773442
+      "prev_close": 350.0294,
+      "price": 345.55,
+      "volume": 52684126
     },
     "AMZN": {
-      "change_pct": 7.29,
-      "days_to_earnings": -6,
+      "change_pct": -2.43,
+      "days_to_earnings": -7,
       "name": "Amazon.com, Inc.",
       "next_earnings": "2026-10-29",
-      "prev_close": 249.7972,
-      "price": 268.005,
-      "volume": 67954399
+      "prev_close": 265.8179,
+      "price": 259.353,
+      "volume": 67116767
     },
     "MSFT": {
-      "change_pct": 7.92,
-      "days_to_earnings": 84,
+      "change_pct": -3.67,
+      "days_to_earnings": 83,
       "name": "Microsoft Corporation",
       "next_earnings": "2027-01-27",
-      "prev_close": 517.54,
-      "price": 558.51,
-      "volume": 37068190
+      "prev_close": 554.24,
+      "price": 533.88,
+      "volume": 29828033
     },
     "NVDA": {
-      "change_pct": -2.89,
-      "days_to_earnings": 13,
+      "change_pct": -9.49,
+      "days_to_earnings": 12,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 208.11,
-      "price": 202.1,
-      "volume": 102659605
+      "prev_close": 201.15,
+      "price": 182.06,
+      "volume": 242137490
     },
     "TSLA": {
-      "change_pct": -2.46,
-      "days_to_earnings": 84,
+      "change_pct": -10.17,
+      "days_to_earnings": 83,
       "name": "Tesla, Inc.",
       "next_earnings": "2027-01-27",
-      "prev_close": 395.85,
-      "price": 386.1101,
-      "volume": 37587837
+      "prev_close": 382.2,
+      "price": 343.32,
+      "volume": 65189365
     }
   },
-  "updated_at": "2026-11-04T20:29:48+00:00"
+  "updated_at": "2026-11-05T20:46:08+00:00"
 }
