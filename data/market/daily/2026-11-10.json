@@ -1,0 +1,52 @@
+{
+  "errors": [],
+  "market_date": "2026-11-10",
+  "tickers": {
+    "AAPL": {
+      "change_pct": -0.55,
+      "days_to_earnings": 79,
+      "name": "Apple Inc.",
+      "next_earnings": "2027-01-28",
+      "prev_close": 350.6602,
+      "price": 348.74,
+      "volume": 18941406
+    },
+    "AMZN": {
+      "change_pct": 1.37,
+      "days_to_earnings": -12,
+      "name": "Amazon.com, Inc.",
+      "next_earnings": "2026-10-29",
+      "prev_close": 268.1543,
+      "price": 271.8199,
+      "volume": 27739353
+    },
+    "MSFT": {
+      "change_pct": -2.03,
+      "days_to_earnings": 78,
+      "name": "Microsoft Corporation",
+      "next_earnings": "2027-01-27",
+      "prev_close": 544.52,
+      "price": 533.46,
+      "volume": 17547543
+    },
+    "NVDA": {
+      "change_pct": -6.49,
+      "days_to_earnings": 7,
+      "name": "NVIDIA Corporation",
+      "next_earnings": "2026-11-17",
+      "prev_close": 180.1434,
+      "price": 168.46,
+      "volume": 364418593
+    },
+    "TSLA": {
+      "change_pct": -0.32,
+      "days_to_earnings": 78,
+      "name": "Tesla, Inc.",
+      "next_earnings": "2027-01-27",
+      "prev_close": 378.7,
+      "price": 377.475,
+      "volume": 18445583
+    }
+  },
+  "updated_at": "2026-11-10T20:32:30+00:00"
+}

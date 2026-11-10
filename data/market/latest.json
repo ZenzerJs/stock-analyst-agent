@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-11-09",
+  "market_date": "2026-11-10",
   "tickers": {
     "AAPL": {
-      "change_pct": 2.33,
-      "days_to_earnings": 80,
+      "change_pct": -0.55,
+      "days_to_earnings": 79,
       "name": "Apple Inc.",
       "next_earnings": "2027-01-28",
-      "prev_close": 342.7,
-      "price": 350.69,
-      "volume": 47499490
+      "prev_close": 350.6602,
+      "price": 348.74,
+      "volume": 18941406
     },
     "AMZN": {
-      "change_pct": 2.72,
-      "days_to_earnings": -11,
+      "change_pct": 1.37,
+      "days_to_earnings": -12,
       "name": "Amazon.com, Inc.",
       "next_earnings": "2026-10-29",
-      "prev_close": 259.85,
-      "price": 266.93,
-      "volume": 50588278
+      "prev_close": 268.1543,
+      "price": 271.8199,
+      "volume": 27739353
     },
     "MSFT": {
-      "change_pct": 2.55,
-      "days_to_earnings": 79,
+      "change_pct": -2.03,
+      "days_to_earnings": 78,
       "name": "Microsoft Corporation",
       "next_earnings": "2027-01-27",
-      "prev_close": 531.6,
-      "price": 545.18,
-      "volume": 25282835
+      "prev_close": 544.52,
+      "price": 533.46,
+      "volume": 17547543
     },
     "NVDA": {
-      "change_pct": -5.01,
-      "days_to_earnings": 8,
+      "change_pct": -6.49,
+      "days_to_earnings": 7,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 188.0838,
-      "price": 178.67,
-      "volume": 456756830
+      "prev_close": 180.1434,
+      "price": 168.46,
+      "volume": 364418593
     },
     "TSLA": {
-      "change_pct": 5.27,
-      "days_to_earnings": 79,
+      "change_pct": -0.32,
+      "days_to_earnings": 78,
       "name": "Tesla, Inc.",
       "next_earnings": "2027-01-27",
-      "prev_close": 359.12,
-      "price": 378.05,
-      "volume": 36201597
+      "prev_close": 378.7,
+      "price": 377.475,
+      "volume": 18445583
     }
   },
-  "updated_at": "2026-11-09T23:05:38+00:00"
+  "updated_at": "2026-11-10T20:32:30+00:00"
 }
