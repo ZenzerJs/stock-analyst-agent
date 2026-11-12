@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-11-11",
+  "market_date": "2026-11-12",
   "tickers": {
     "AAPL": {
-      "change_pct": 1.75,
-      "days_to_earnings": 78,
+      "change_pct": -0.18,
+      "days_to_earnings": 77,
       "name": "Apple Inc.",
       "next_earnings": "2027-01-28",
-      "prev_close": 348.81,
-      "price": 354.91,
-      "volume": 20813030
+      "prev_close": 355.48,
+      "price": 354.838,
+      "volume": 24826277
     },
     "AMZN": {
-      "change_pct": -1.75,
-      "days_to_earnings": -13,
+      "change_pct": 0.23,
+      "days_to_earnings": -14,
       "name": "Amazon.com, Inc.",
       "next_earnings": "2026-10-29",
-      "prev_close": 271.3015,
-      "price": 266.545,
-      "volume": 26579947
+      "prev_close": 266.8195,
+      "price": 267.44,
+      "volume": 28213553
     },
     "MSFT": {
-      "change_pct": -2.88,
-      "days_to_earnings": 77,
+      "change_pct": 0.61,
+      "days_to_earnings": 76,
       "name": "Microsoft Corporation",
       "next_earnings": "2027-01-27",
-      "prev_close": 535.0,
-      "price": 519.59,
-      "volume": 19472208
+      "prev_close": 519.938,
+      "price": 523.11,
+      "volume": 14203152
     },
     "NVDA": {
-      "change_pct": 3.0,
-      "days_to_earnings": 6,
+      "change_pct": 3.55,
+      "days_to_earnings": 5,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 170.08,
-      "price": 175.18,
-      "volume": 219543879
+      "prev_close": 160.37,
+      "price": 166.07,
+      "volume": 710039875
     },
     "TSLA": {
-      "change_pct": 2.71,
-      "days_to_earnings": 77,
+      "change_pct": 2.82,
+      "days_to_earnings": 76,
       "name": "Tesla, Inc.",
       "next_earnings": "2027-01-27",
-      "prev_close": 381.1,
-      "price": 391.42,
-      "volume": 20582592
+      "prev_close": 386.55,
+      "price": 397.45,
+      "volume": 26051623
     }
   },
-  "updated_at": "2026-11-11T20:17:33+00:00"
+  "updated_at": "2026-11-12T21:00:12+00:00"
 }
