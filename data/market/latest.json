@@ -1,52 +1,52 @@
 {
   "errors": [],
-  "market_date": "2026-11-16",
+  "market_date": "2026-11-17",
   "tickers": {
     "AAPL": {
-      "change_pct": -0.73,
-      "days_to_earnings": 73,
-      "name": "Apple Inc.",
-      "next_earnings": "2027-01-28",
-      "prev_close": 355.37,
-      "price": 352.78,
-      "volume": 45013034
-    },
-    "AMZN": {
-      "change_pct": -2.49,
-      "days_to_earnings": -18,
-      "name": "Amazon.com, Inc.",
-      "next_earnings": "2026-10-29",
-      "prev_close": 264.32,
-      "price": 257.75,
-      "volume": 47704999
-    },
-    "MSFT": {
       "change_pct": -0.5,
       "days_to_earnings": 72,
+      "name": "Apple Inc.",
+      "next_earnings": "2027-01-28",
+      "prev_close": 353.6796,
+      "price": 351.91,
+      "volume": 35893646
+    },
+    "AMZN": {
+      "change_pct": -0.37,
+      "days_to_earnings": -19,
+      "name": "Amazon.com, Inc.",
+      "next_earnings": "2026-10-29",
+      "prev_close": 258.8371,
+      "price": 257.89,
+      "volume": 36507884
+    },
+    "MSFT": {
+      "change_pct": -2.65,
+      "days_to_earnings": 71,
       "name": "Microsoft Corporation",
       "next_earnings": "2027-01-27",
-      "prev_close": 520.58,
-      "price": 517.99,
-      "volume": 29564193
+      "prev_close": 520.0,
+      "price": 506.24,
+      "volume": 27193277
     },
     "NVDA": {
-      "change_pct": -2.95,
-      "days_to_earnings": 1,
+      "change_pct": -0.44,
+      "days_to_earnings": 0,
       "name": "NVIDIA Corporation",
       "next_earnings": "2026-11-17",
-      "prev_close": 160.8901,
-      "price": 156.14,
-      "volume": 329959344
+      "prev_close": 156.15,
+      "price": 155.46,
+      "volume": 345447821
     },
     "TSLA": {
-      "change_pct": -1.92,
-      "days_to_earnings": 72,
+      "change_pct": 0.13,
+      "days_to_earnings": 71,
       "name": "Tesla, Inc.",
       "next_earnings": "2027-01-27",
-      "prev_close": 387.17,
-      "price": 379.74,
-      "volume": 30080721
+      "prev_close": 379.6,
+      "price": 380.11,
+      "volume": 21690314
     }
   },
-  "updated_at": "2026-11-16T22:58:34+00:00"
+  "updated_at": "2026-11-17T21:51:53+00:00"
 }
